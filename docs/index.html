@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unblock - Lightweight MV3 Content Blocker</title>
+  <meta name="description"
+    content="Unblock is a privacy-first, MV3-optimized content blocker with element picker, cosmetic filtering, and safe scriptlets." />
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23e33' d='M16 2l12 4v9c0 7-5 13-12 15C9 28 4 22 4 15V6z'/%3E%3Ctext x='16' y='20' font-size='15' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%23fff'%3Eu%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #9fb3c8;
+      --primary: #e33;
+      --primary-soft: #ff5a5a;
+      --accent: #7fa3ff;
+      --border: #26333f;
+      --card: #151c24;
+      --card-hover: #1a232d;
+      --code-bg: #0a0f16;
+      --header-bg: #10161d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu,
+        Cantarell, "Noto Sans", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    ::selection {
+      background: rgba(238, 51, 51, 0.35);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    section {
+      scroll-margin-top: 4rem;
+    }
+
+    /* ---------------------------------------------------------------- hero */
+    header {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(1200px 500px at 50% -10%, rgba(238, 51, 51, 0.18), transparent 60%),
+        radial-gradient(900px 400px at 80% 110%, rgba(127, 163, 255, 0.10), transparent 60%),
+        var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: clamp(3rem, 6vw, 5.5rem) 1.25rem clamp(2rem, 4vw, 3rem);
+      text-align: center;
+    }
+
+    .logo {
+      width: 76px;
+      height: 76px;
+      margin-inline: auto;
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 8px 24px rgba(238, 51, 51, 0.35));
+    }
+
+    header h1 {
+      margin-top: 1rem;
+      font-size: clamp(2.75rem, 7vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    header .tagline {
+      margin: 0.75rem auto 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.2vw, 1.15rem);
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3fb950;
+    }
+
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.15rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.06);
+      font-weight: 600;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .btn:hover {
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #3d4c5c;
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, var(--primary-soft), var(--primary));
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #fff;
+      box-shadow: 0 6px 20px -8px rgba(238, 51, 51, 0.6);
+    }
+
+    .btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    /* ----------------------------------------------------------------- nav */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(13, 17, 23, 0.88);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav ul {
+      display: flex;
+      flex-wrap: wrap;
+      flex-direction: row;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem 1rem;
+      list-style: none;
+      max-width: 960px;
+      margin-inline: auto;
+    }
+
+    nav a {
+      color: var(--muted);
+      padding: 0.375rem 0.7rem;
+      border-radius: 0.5rem;
+      font-size: 0.925rem;
+    }
+
+    nav a:hover {
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.07);
+      text-decoration: none;
+    }
+
+    /* ----------------------------------------------------------------- main */
+    main {
+      max-width: 960px;
+      margin-inline: auto;
+      padding: clamp(1.25rem, 2.5vw, 2.25rem) 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1.25rem, 2.5vw, 2rem);
+    }
+
+    section {
+      min-width: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: clamp(1.25rem, 2.5vw, 1.9rem);
+      transition: border-color 0.15s ease;
+    }
+
+    section:hover {
+      border-color: #33424f;
+    }
+
+    section h2 {
+      font-size: clamp(1.3rem, 2.6vw, 1.6rem);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.9rem;
+    }
+
+    section h2::before {
+      content: "";
+      width: 4px;
+      height: 1.2em;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--primary-soft), var(--primary));
+    }
+
+    section h3 {
+      margin-bottom: 0.4rem;
+      font-size: 1.05rem;
+    }
+
+    p {
+      color: var(--fg);
+    }
+
+    .muted,
+    .muted a {
+      color: var(--muted);
+    }
+
+    ul,
+    ol {
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    /* ----------------------------------------------------------------- grid */
+    .grid {
+      display: grid;
+      gap: 0.9rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .card {
+      min-width: 0;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.1rem;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      background: var(--card-hover);
+      border-color: #3d4c5c;
+    }
+
+    .card h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--fg);
+    }
+
+    /* ------------------------------------------------------------- lists */
+    .checks {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .checks li {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .checks li::before {
+      content: "✓";
+      color: #3fb950;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    strong {
+      color: var(--fg);
+    }
+
+    /* ------------------------------------------------------------- table */
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      padding: 0.55rem 0.85rem;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child th,
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    td strong,
+    td .no {
+      color: var(--primary-soft);
+    }
+
+    td .yes {
+      color: #3fb950;
+    }
+
+    /* ---------------------------------------------------------- code/text */
+    code,
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    code {
+      background: rgba(127, 163, 255, 0.12);
+      color: #c9d7f5;
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.375rem;
+      font-size: 0.9em;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      overflow-x: auto;
+      margin-top: 0.75rem;
+      color: var(--fg);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      max-width: 100%;
+    }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      padding: 0.25rem 0;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 1.6rem;
+      height: 1.6rem;
+      margin-top: 0.15rem;
+      display: grid;
+      place-items: center;
+      border-radius: 0.5rem;
+      background: rgba(238, 51, 51, 0.16);
+      border: 1px solid rgba(238, 51, 51, 0.35);
+      color: var(--primary-soft);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .warn {
+      border-left: 3px solid var(--primary);
+      background: rgba(238, 51, 51, 0.06);
+      padding: 0.75rem 1rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    /* -------------------------------------------------------------- footer */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--header-bg);
+      padding: 2.5rem 1.25rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    footer .links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.25rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .card,
+      .btn {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg width="76" height="76" viewBox="0 0 76 76" fill="none">
+        <path d="M38 4l30 10v23c0 17-12 29-30 35C20 66 8 54 8 37V14z" fill="#e33" />
+        <path d="M38 9l25 8.5v19.5c0 14-9.5 24-25 29.5-15.5-5.5-25-15.5-25-29.5V17.5z" fill="#671515" />
+        <text x="38" y="48" font-size="38" font-family="system-ui, sans-serif" font-weight="800"
+          text-anchor="middle" fill="#fff">u</text>
+      </svg>
+    </div>
+    <h1>Unblock</h1>
+    <p class="tagline">
+      Lightweight, privacy-first MV3 content blocker. Curated network rules,
+      cosmetic filtering, a safe scriptlets engine and an element picker — with
+      transparent trade-offs.
+    </p>
+    <div class="badges">
+      <span class="badge"><span class="dot"></span>v1.0.0</span>
+      <span class="badge">Manifest V3</span>
+      <span class="badge">No Telemetry</span>
+      <span class="badge">Local-Only</span>
+      <span class="badge">Open Source · MIT</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="#install">Get Started</a>
+      <a class="btn" href="https://github.com/adyoi/unblock" target="_blank" rel="noopener">GitHub Repo</a>
+      <a class="btn" href="privacy.html" rel="noopener">Privacy Policy</a>
+    </div>
+  </header>
+
+  <nav>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#limits">Limits</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#usage">Usage</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#release">Release</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        <strong>Unblock</strong> removes ads, trackers, telemetry beacons,
+        popups and intrusive elements using Chromium's MV3
+        <code>declarativeNetRequest</code>, heuristic cosmetic hiding, a small
+        auditable scriptlets engine and a visual element picker.
+      </p>
+      <p>
+        Decisions are made locally against bundled rule lists. Unblock makes no
+        network requests of its own and ships no remote code — the behavior you
+        review is the behavior you get.
+      </p>
+      <p class="muted">
+        Designed for predictability, auditability and low overhead. This is a
+        pragmatic subset of what a full-fledged filter browser offers, not a 1:1
+        port of uBlock Origin — the gaps are documented honestly in the
+        <a href="#limits">limits</a> section.
+      </p>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Network Blocking</h3>
+          <p class="muted">
+            Curated DNR rule sets for ads, privacy and trackers, with
+            resource-type targeting that leaves video streaming alone.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Element Picker</h3>
+          <p class="muted">
+            Hover, click, done. Generates safe CSS selectors and persists them
+            as <code>##...</code> custom rules.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Scriptlets</h3>
+          <p class="muted">
+            Defensive subset: <code>no-adblocker</code>,
+            <code>set-constant</code>, <code>json-prune</code>,
+            <code>remove-attr</code>, timer guards, <code>no-eval-if</code>.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Popup / New-Tab Guard</h3>
+          <p class="muted">
+            A MAIN-world guard intercepts <code>window.open</code> and
+            new-tab hijacking attempts — including popunders that sit inside
+            video players.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Whitelist &amp; Custom Rules</h3>
+          <p class="muted">
+            One-click per-site allowlist, import/export as JSON, and raw
+            adblock-style rules parsed into safe DNR primitives.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Privacy-First</h3>
+          <p class="muted">
+            Local-only state, no telemetry, no remote code, least-privilege
+            permissions, MIT licensed.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="limits">
+      <h2>Honest Limits</h2>
+      <p class="warn">
+        Manifest V3 removed several MV2-era capabilities. Unblock implements the
+        reliable subset and says what it does not do.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Unblock (MV3)</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Per-request dynamic filtering</td>
+              <td class="no">No</td>
+              <td>DNR is static; no MV2-style live allow/block UI.</td>
+            </tr>
+            <tr>
+              <td>Full <code>##+js()</code> scriptlet set</td>
+              <td class="no">Subset</td>
+              <td>Only curated, low-risk scriptlets are shipped.</td>
+            </tr>
+            <tr>
+              <td><code>removeparam=</code> / <code>redirect=</code> / <code>replace=</code></td>
+              <td class="no">No</td>
+              <td>Not expressible with safe MV3 DNR primitives.</td>
+            </tr>
+            <tr>
+              <td>CNAME uncloaking</td>
+              <td class="no">No</td>
+              <td>Not exposed via DNR.</td>
+            </tr>
+            <tr>
+              <td>Real-time request logger</td>
+              <td class="no">No</td>
+              <td>MV3 lacks a live <code>webRequest</code> stream.</td>
+            </tr>
+            <tr>
+              <td>Filter list auto-updates</td>
+              <td class="no">Planned (opt-in)</td>
+              <td>Rule lists ship inside the package for now.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Installation</h2>
+      <p class="muted">
+        Unblock installs from source as an unpacked MV3 extension in any
+        Chromium browser (Chrome, Edge, Brave, …).
+      </p>
+      <ol class="steps">
+        <li>
+          <span>
+            <strong>Clone the repository</strong>:
+            <pre><code>git clone https://github.com/adyoi/unblock.git</code></pre>
+          </span>
+        </li>
+        <li>
+          <span>Open <strong><code>chrome://extensions/</code></strong> and enable
+            <strong>Developer mode</strong> (top-right).</span>
+        </li>
+        <li>
+          <span>Click <strong>Load unpacked</strong> and select the cloned
+            <code>unblock</code> folder (the one containing
+            <code>manifest.json</code>).</span>
+        </li>
+        <li>
+          <span>Pin the extension, make sure the icon is colored, and browse.</span>
+        </li>
+      </ol>
+      <p class="muted">
+        Prefer a packaged build? Grab the latest <code>.zip</code> from the
+        <a href="https://github.com/adyoi/unblock/releases" target="_blank" rel="noopener">releases page</a>.
+      </p>
+    </section>
+
+    <section id="usage">
+      <h2>Usage</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Toolbar Popup</h3>
+          <ul class="checks">
+            <li>Master on/off switch</li>
+            <li>Allow / unblock the current site</li>
+            <li>Manage the per-site whitelist</li>
+            <li>Launch the Element Picker</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Element Picker</h3>
+          <ul class="checks">
+            <li>Hover to highlight the target box</li>
+            <li>Click to block the selected element</li>
+            <li>Block a parent element or undo in one click</li>
+            <li><code>Esc</code>, Cancel or Exit to abort</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Options Page</h3>
+          <ul class="checks">
+            <li>Custom rules: cosmetic ##, domain ||, plain paths</li>
+            <li>Whitelist editor with normalization</li>
+            <li>Import / export your configuration as JSON</li>
+            <li>Advanced defenses and heuristics toggles</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Network (DNR)</h3>
+          <p class="muted">
+            Four static rulesets, priority 1, resource-type aware and
+            <code>thirdParty</code>-scoped. Dynamic whitelist rules use
+            <code>allowAllRequests</code> on frames plus initiator-scoped
+            <code>allow</code> for subresources.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Cosmetic</h3>
+          <p class="muted">
+            <code>document_start</code> injection with a MutationObserver,
+            requestAnimationFrame coalescing and WeakSet deduplication.
+            Ownership markers keep multiple hiders from corrupting each other.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Scriptlets</h3>
+          <p class="muted">
+            A defensive engine in the ISOLATED world plus a MAIN-world
+            popup/new-tab guard that exempts only genuine media controls.
+          </p>
+        </div>
+        <div class="card">
+          <h3>State &amp; Messaging</h3>
+          <p class="muted">
+            <code>js/state.js</code> shares one snapshot of settings via
+            <code>chrome.storage</code>. UI talks to the service worker over
+            runtime messages; the picker bridges through <code>postMessage</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>Security &amp; Privacy</h2>
+      <ul class="checks">
+        <li>No remote code, no telemetry, no analytics, no accounts</li>
+        <li>No outbound requests of the extension's own</li>
+        <li>All state in <code>chrome.storage.local</code> on your device</li>
+        <li>Defensive boundaries, CSS escaping, depth and length guards</li>
+        <li>XSS-safe DOM handling; import and rule parsing sanitized</li>
+      </ul>
+    </section>
+
+    <section id="release">
+      <h2>Release Notes</h2>
+      <p>
+        v1.0.0 is the first public release. All settings now gate real behavior
+        — enable toggle, per-site whitelist, advanced defenses, heuristics and
+        the scriptlet allowlist — and custom rules plus the element picker are
+        fully applied.
+      </p>
+      <ul class="checks">
+        <li>Static + dynamic DNR sync for rulesets, whitelist and custom rules</li>
+        <li>New-tab / popunder guard fixed inside video players</li>
+        <li>Changelog and privacy policy published</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Unblock Project · MIT License · Manifest V3, done pragmatically.</p>
+    <div class="links">
+      <a href="https://github.com/adyoi/unblock" target="_blank" rel="noopener">Source</a>
+      <a href="https://github.com/adyoi/unblock/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      <a href="https://github.com/adyoi/unblock/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/adyoi/unblock/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+  </footer>
+</body>
+
+</html>

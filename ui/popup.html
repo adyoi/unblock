@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unblock</title>
+  <link rel="stylesheet" href="../css/popup.css">
+</head>
+
+<body>
+  <div class="popup">
+    <header>
+      <h1>Unblock</h1>
+      <span id="status" class="status">...</span>
+    </header>
+    <main>
+      <div class="row">
+        <label class="switch">
+          <input type="checkbox" id="toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Enable blocking</span>
+      </div>
+      <div class="grid">
+        <button id="blockThis">Whitelist site</button>
+        <button id="picker" class="primary">Pick element</button>
+        <button id="reload">Reload tab</button>
+        <button id="options">Options</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="advanced"> Advanced defenses</label>
+        <label><input type="checkbox" id="heuristics"> Heuristics</label>
+        <label><input type="checkbox" id="scriptletsAllow"> Disable scriptlets for this site</label>
+      </div>
+      <div class="list">
+        <div class="list-head">
+          <span>Whitelisted sites</span>
+          <button id="clearWl" class="link" hidden>Clear all</button>
+        </div>
+        <p id="wlEmpty" class="hint small" hidden>Empty</p>
+        <div id="whitelist"></div>
+      </div>
+      <div class="hint small">MV3 • DNR + Cosmetic + Scriptlets</div>
+    </main>
+    <footer>
+        <small>Unblock v1.0.0</small>
+    </footer>
+  </div>
+  <script src="../js/popup.js" type="module"></script>
+</body>
+
+</html>

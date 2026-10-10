@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unblock - Options</title>
+  <link rel="stylesheet" href="../css/options.css">
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Unblock – Options</h1>
+      <div class="actions">
+        <button id="save">Save</button>
+        <button id="export">Export</button>
+        <input type="file" id="import" accept=".json,.txt" hidden>
+        <button id="importBtn">Import</button>
+      </div>
+    </header>
+    <main>
+      <section>
+        <h2>Custom Rules</h2>
+        <p class="hint">One per line. Examples: <code>##.ad-banner</code>, <code>###ads</code>,
+          <code>||ads.example.com</code>, <code>/ads/*.js</code>
+        </p>
+        <textarea id="rules" spellcheck="false" placeholder="##.sponsored
+||tracker.example.com
+/example-ad.js"></textarea>
+      </section>
+      <section>
+        <h2>Whitelisted Domains</h2>
+        <textarea id="whitelist" spellcheck="false" placeholder="example.com
+sub.example.com"></textarea>
+      </section>
+      <section>
+        <h2>Advanced Features</h2>
+        <ul class="hint">
+          <li><b>Scriptlets</b>: Lightweight anti-adblock mitigations.</li>
+          <li><b>Element Picker</b>: Click elements to block visually.</li>
+          <li><b>Procedural Cosmetic</b>: Live mutation-based hiding.</li>
+          <li><b>Extended Rulesets</b>: Ads, privacy & trackers (MV3-safe).</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Notes</h2>
+        <ul class="hint">
+          <li>MV3 uses static declarativeNetRequest rules. Dynamic filtering is not fully portable to Chromium MV3.</li>
+          <li>Scriptlets run at <code>document_start</code> for earlier coverage.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+  <script src="../js/options.js" type="module"></script>
+</body>
+
+</html>

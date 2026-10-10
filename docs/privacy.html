@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy - Unblock</title>
+<style>
+  body{max-width:46rem;margin:0 auto;padding:2rem 1.25rem;font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#222}
+  h1,h2{line-height:1.25}
+  h2{margin-top:2em}
+  table{border-collapse:collapse;width:100%;margin:1em 0}
+  th,td{border:1px solid #ccc;padding:.5em .75em;text-align:left;vertical-align:top}
+  th{background:#f5f5f5}
+  code{background:#f0f0f0;padding:.1em .35em;border-radius:4px;font-size:.9em}
+</style>
+</head>
+<body>
+<h1>Privacy Policy</h1>
+<p><strong>Unblock</strong> &mdash; last updated: 5 October 2026</p>
+
+<h2>Short version</h2>
+<p>Unblock does not collect, transmit, sell, or share any personal data. There are no analytics, no telemetry, no crash reporting, no remote logging, no account system, and no advertising. Everything the extension needs stays on your device.</p>
+
+<h2>What the extension stores</h2>
+<p>All data is written to <code>chrome.storage.local</code> on your own browser profile and is never sent anywhere.</p>
+<table>
+<thead><tr><th>Key</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>Master on/off switch</td></tr>
+<tr><td><code>whitelist</code></td><td>List of hostnames you chose to allow</td></tr>
+<tr><td><code>customRules</code></td><td>Rules you wrote or created with the Element Picker</td></tr>
+<tr><td><code>cosmeticSelectors</code></td><td>Reserved for future cosmetic rules</td></tr>
+<tr><td><code>advancedDefenses</code></td><td>Toggle for the defensive scriptlet layer</td></tr>
+<tr><td><code>heuristicsEnabled</code></td><td>Toggle for heuristic cosmetic hiding</td></tr>
+<tr><td><code>scriptletsAllowlist</code></td><td>Sites where you disabled auto-scriptlets</td></tr>
+<tr><td><code>version</code></td><td>Settings schema version, used for migrations</td></tr>
+</tbody>
+</table>
+<p>If you previously used an earlier build that stored settings under the legacy storage key, Unblock migrates that data <strong>locally</strong> into <code>unblock_settings</code> and then stops using the old key. No data leaves the device during migration.</p>
+
+<h2>Network activity</h2>
+<p>Unblock performs <strong>no outbound requests of its own</strong>. It contains no CDN links, no remote script imports, no update pings, and no font or telemetry endpoints.</p>
+<p>The only network requests Unblock <em>observes</em> are the ordinary page requests loaded by the websites you visit, which the browser handles. Unblock inspects their URLs locally against rule lists to decide what to block &mdash; that decision is made entirely on your machine.</p>
+
+<h2>Permissions and why they are needed</h2>
+<table>
+<thead><tr><th>Permission</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><code>declarativeNetRequest</code>, <code>declarativeNetRequestWithHostAccess</code></td><td>Apply the bundled block rules. Requests are handled by the browser, not by a proxy.</td></tr>
+<tr><td><code>&lt;all_urls&gt;</code> host access</td><td>Required so content scripts and rules can run on the sites you visit.</td></tr>
+<tr><td><code>storage</code></td><td>Save your settings, whitelist and custom rules locally.</td></tr>
+<tr><td><code>tabs</code></td><td>Read the active tab's hostname for the "Whitelist site" button.</td></tr>
+<tr><td><code>activeTab</code></td><td>Inject the Element Picker into the current tab when you click the button.</td></tr>
+<tr><td><code>scripting</code></td><td>Inject the Element Picker overlay on demand.</td></tr>
+<tr><td><code>unlimitedStorage</code></td><td>Room for large custom rule lists.</td></tr>
+<tr><td><code>userScripts</code></td><td>Reserved for user-supplied rules; not used for remote code.</td></tr>
+</tbody>
+</table>
+
+<h2>Third parties</h2>
+<p>None. Unblock has no third-party SDKs, no partner scripts, and no affiliate links. Rule lists are bundled locally in the extension package.</p>
+
+<h2>Children</h2>
+<p>Unblock is not directed at children and collects no data from anyone.</p>
+
+<h2>Changes</h2>
+<p>If a future version changes what is stored or transmitted, this policy will be updated in the repository before that version is released, and the "last updated" date above will change.</p>
+
+<h2>Contact</h2>
+<p>Questions or requests: open an issue on the project's GitHub repository, or use the support URL listed in the Chrome Web Store listing.</p>
+
+<h2>Removal</h2>
+<p>Uninstalling the extension from <code>chrome://extensions/</code> permanently deletes all of its locally stored data.</p>
+</body>
+</html>

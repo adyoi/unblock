@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>popunder-grid</title>
+</head>
+<body>
+<!-- E2E fixture used by tools/e2e-guard.js. Runs every known popunder/new-tab
+     vector and reports the outcome to the eval server via /report. A leak is
+     any /leak?n=... request that actually reaches the server (a real tab). -->
+<script>
+(function () {
+  var REPORT = "/report";
+  var out = {
+    guard: null,
+    open_direct: "skip",
+    open_proto: "skip",
+    open_none: "skip",
+    plain_ok: "skip",
+    clicks: [],
+    attempts: []
+  };
+  var attempts = out.attempts;
+  function mark(m) {
+    try {
+      attempts.push(m + "@" + new Date().getTime());
+    } catch (e) {}
+  }
+
+  window.addEventListener(
+    "click",
+    function (e) {
+      var href = "";
+      try {
+        href = (e.target && e.target.getAttribute && e.target.getAttribute("href")) || "";
+      } catch (err) {}
+      out.clicks.push({ href: href, prevented: e.defaultPrevented || false });
+    },
+    true
+  );
+
+  function run() {
+    try {
+      out.guard = !!window.__unblockGuardInstalled__;
+    } catch (e) {
+      out.guard = "err:" + e.message;
+    }
+
+    // 1. window.open straight up (buaya.fun G() vector)
+    mark("1:open");
+    try {
+      var r = window.open("/leak?n=2", "_blank");
+      out.open_direct = r === null ? "blocked" : "leak";
+    } catch (e) {
+      out.open_direct = "err:" + e.message;
+    }
+
+    // 2. Window.prototype.open.call escape
+    mark("2:proto");
+    try {
+      var r2 = Window.prototype.open.call(window, "/leak?n=3", "_blank");
+      out.open_proto = r2 === null ? "blocked" : "leak";
+    } catch (e) {
+      out.open_proto = "err:" + e.message;
+    }
+
+    // 3. window.open with no URL (blank window can be written into)
+    mark("3:none");
+    try {
+      var r3 = window.open();
+      out.open_none = r3 === null ? "blocked" : "leak";
+    } catch (e) {
+      out.open_none = "err:" + e.message;
+    }
+
+    // 4. synthetic click on a target=_blank anchor
+    mark("4:synth");
+    var a = document.createElement("a");
+    a.href = "/leak?n=5";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    var aPrevented = null;
+    a.addEventListener("click", function (e) { aPrevented = e.defaultPrevented; });
+    try {
+      a.dispatchEvent(new MouseEvent("click"));
+    } catch (e) {}
+    mark("4b:synth.prevented=" + aPrevented);
+    out.synth_click = a.hasAttribute("href") ? "leak" : "blocked";
+
+    // 5. programmatic .click() on a target=_blank anchor
+    mark("5:progclick");
+    var a2 = document.createElement("a");
+    a2.href = "/leak?n=6";
+    a2.target = "_blank";
+    document.body.appendChild(a2);
+    try {
+      a2.click();
+    } catch (e) {}
+    mark("5b:progclick.done");
+
+    // 6. form target=_blank submit (the submit event veto)
+    mark("6:form");
+    var form = document.createElement("form");
+    form.method = "get";
+    form.target = "_blank";
+    form.action = "/leak?n=7";
+    document.body.appendChild(form);
+    try {
+      form.submit();
+    } catch (e) {}
+    mark("6b:form.done");
+
+    // 7. middle-click auxclick on a clean-URL anchor
+    mark("7:aux");
+    var a3 = document.createElement("a");
+    a3.href = "/leak?n=8";
+    a3.target = "_blank";
+    document.body.appendChild(a3);
+    try {
+      a3.dispatchEvent(new MouseEvent("auxclick", { button: 1 }));
+    } catch (e) {}
+    mark("7b:aux.done");
+
+    // 8. a plain same-tab click must not be swallowed
+    mark("8:plain");
+    var a4 = document.createElement("a");
+    a4.href = "#mark";
+    document.body.appendChild(a4);
+    var plainPrevented = null;
+    a4.addEventListener("click", function (e) { plainPrevented = e.defaultPrevented; });
+    try {
+      a4.dispatchEvent(new MouseEvent("click"));
+    } catch (e) {}
+    mark("8b:plain.prevented=" + plainPrevented);
+    out.plain_ok = plainPrevented === false;
+
+    mark("9:report");
+
+    setTimeout(function () {
+      try {
+        fetch(REPORT, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(out)
+        }).catch(function () {});
+      } catch (e) {}
+    }, 1200);
+  }
+
+  // The guard registers on document_start, so it is already here when the
+  // script runs. Wait briefly anyway so a slow injection shows up as guard:false
+  // instead of a false "leak".
+  var waited = 0;
+  (function waitGuard() {
+    if (window.__unblockGuardInstalled__ || waited >= 8000) {
+      run();
+      return;
+    }
+    waited += 300;
+    setTimeout(waitGuard, 300);
+  })();
+})();
+</script>
+</body>
+</html>

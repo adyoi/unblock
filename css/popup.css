@@ -1,0 +1,375 @@
+/* Unblock - popup theme
+   Brand: #E53935 (enabled) / #9E9E9E (disabled) */
+
+:root {
+  color-scheme: dark;
+  --bg: #1b1b1b;
+  --panel: #232323;
+  --panel-2: #2b2b2b;
+  --line: #3a3a3a;
+  --fg: #ececec;
+  --fg-dim: #b0b0b0;
+  --brand: #e53935;
+  --brand-hi: #ff5a55;
+  --radius: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Author display rules outrank the UA [hidden] rule, so `hidden` needs to be
+   restated here or toggling it has no effect at all. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  width: 296px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #262626, #1f1f1f);
+  border-bottom: 1px solid var(--line);
+}
+
+h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: rgba(158, 158, 158, 0.18);
+  color: #d0d0d0;
+  border: 1px solid var(--line);
+}
+
+.status.on {
+  background: rgba(229, 57, 53, 0.16);
+  color: #ff8a85;
+  border-color: rgba(229, 57, 53, 0.45);
+}
+
+.status.off {
+  background: rgba(158, 158, 158, 0.14);
+  color: #bdbdbd;
+}
+
+.status.warn {
+  background: rgba(255, 193, 7, 0.16);
+  color: #ffd666;
+  border-color: rgba(255, 193, 7, 0.45);
+}
+
+button.warn {
+  background: rgba(255, 193, 7, 0.14);
+  border-color: rgba(255, 193, 7, 0.5);
+  color: #ffd666;
+}
+
+button.warn:hover {
+  background: rgba(255, 193, 7, 0.24);
+}
+
+button.link {
+  background: none;
+  border: 1px solid var(--line);
+  color: #9a9a9a;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+}
+
+button.link:hover {
+  background: rgba(158, 158, 158, 0.16);
+  color: #d0d0d0;
+}
+
+.item.current {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.4);
+}
+
+.item.current > span {
+  color: #ffd666;
+}
+
+/* ------------------------------------------------------------------ main */
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------------- switch */
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch .slider {
+  width: 38px;
+  height: 20px;
+  border-radius: 999px;
+  background: #4a4a4a;
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e6e6e6;
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + .slider,
+.switch.on .slider {
+  background: var(--brand);
+  border-color: var(--brand-hi);
+}
+
+.switch input:checked + .slider::before,
+.switch.on .slider::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--brand-hi);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- grid */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+button {
+  background: var(--panel-2);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 7px 8px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+}
+
+button:hover {
+  background: #343434;
+  border-color: #4d4d4d;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--brand-hi);
+  outline-offset: 2px;
+}
+
+button.primary {
+  background: var(--brand);
+  border-color: var(--brand-hi);
+  color: #fff;
+}
+
+button.primary:hover {
+  background: var(--brand-hi);
+}
+
+button.danger {
+  background: transparent;
+  border-color: rgba(229, 57, 53, 0.5);
+  color: #ff8a85;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+button.danger:hover {
+  background: rgba(229, 57, 53, 0.14);
+}
+
+/* -------------------------------------------------------------- toggles */
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+.toggles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.toggles label:hover {
+  background: var(--panel-2);
+  color: var(--fg);
+}
+
+.toggles input[type="checkbox"] {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.toggles label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ----------------------------------------------------------------- list */
+.list {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.list-head {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-dim);
+  background: #262626;
+  border-bottom: 1px solid var(--line);
+}
+
+#whitelist {
+  display: flex;
+  flex-direction: column;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+/* The empty state is real markup (#wlEmpty), not a generated ::after — a
+   generated one would render as a second, conflicting line of copy. */
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- hint */
+.hint {
+  color: var(--fg-dim);
+}
+
+.hint.small {
+  font-size: 11px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------- footer */
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  background: #1a1a1a;
+  border-top: 1px solid var(--line);
+  color: var(--fg-dim);
+}
+
+footer small {
+  font-size: 11px;
+}
+
+/* --------------------------------------------------------------- scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

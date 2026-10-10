@@ -1,0 +1,17 @@
+# Build artifacts
+dist/
+*.zip
+
+# Chromium-generated metadata
+_metadata/
+
+# Local memory store
+.rag-data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors / OS
+.DS_Store
+Thumbs.db
