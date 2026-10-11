@@ -7,14 +7,18 @@
   box.id = 'unblock-picker-box';
   const toolbar = document.createElement('div');
   toolbar.id = 'unblock-picker-toolbar';
-  toolbar.innerHTML = `
-    <span>Element picker</span>
-    <button id="block-element">Block element</button>
-    <button id="block-parent">Block parent</button>
-    <button id="block-undo">Undo</button>
-    <button id="block-cancel" class="close">Cancel</button>
-    <button id="block-exit" class="danger">Exit</button>
-  `;
+  const label = document.createElement('span'); label.textContent = 'Element picker';
+  const btnElement = document.createElement('button'); btnElement.id = 'block-element'; btnElement.textContent = 'Block element';
+  const btnParent = document.createElement('button'); btnParent.id = 'block-parent'; btnParent.textContent = 'Block parent';
+  const btnUndo = document.createElement('button'); btnUndo.id = 'block-undo'; btnUndo.textContent = 'Undo';
+  const btnCancel = document.createElement('button'); btnCancel.id = 'block-cancel'; btnCancel.className = 'close'; btnCancel.textContent = 'Cancel';
+  const btnExit = document.createElement('button'); btnExit.id = 'block-exit'; btnExit.className = 'danger'; btnExit.textContent = 'Exit';
+  toolbar.appendChild(label);
+  toolbar.appendChild(btnElement);
+  toolbar.appendChild(btnParent);
+  toolbar.appendChild(btnUndo);
+  toolbar.appendChild(btnCancel);
+  toolbar.appendChild(btnExit);
   document.documentElement.appendChild(overlay);
   document.documentElement.appendChild(box);
   document.documentElement.appendChild(toolbar);
@@ -49,14 +53,14 @@
   try { document.body.style.cursor='crosshair'; } catch (e) {}
   document.addEventListener('mousemove', highlight, true); document.addEventListener('click', pick, true);
   const btnBlock = document.querySelector('#block-element');
-  const btnParent = document.querySelector('#block-parent');
-  const btnUndo = document.querySelector('#block-undo');
-  const btnCancel = document.querySelector('#block-cancel');
-  const btnExit = document.querySelector('#block-exit');
+  // btnParent already created above
+  const btnUndoEl = document.querySelector('#block-undo');
+  const btnCancelEl = document.querySelector('#block-cancel');
+  const btnExitEl = document.querySelector('#block-exit');
   if (btnBlock) btnBlock.onclick = (e) => { e.stopPropagation(); pick(e); };
   if (btnParent) btnParent.onclick = (e) => { e.stopPropagation(); blockParent(e); };
-  if (btnUndo) btnUndo.onclick = (e) => { e.stopPropagation(); undo(e); };
-  if (btnCancel) btnCancel.onclick = (e) => { e.stopPropagation(); cleanup(); };
-  if (btnExit) btnExit.onclick = (e) => { e.stopPropagation(); cleanup(); };
+  if (btnUndoEl) btnUndoEl.onclick = (e) => { e.stopPropagation(); undo(e); };
+  if (btnCancelEl) btnCancelEl.onclick = (e) => { e.stopPropagation(); cleanup(); };
+  if (btnExitEl) btnExitEl.onclick = (e) => { e.stopPropagation(); cleanup(); };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cleanup(); }, { once: true });
 })();
