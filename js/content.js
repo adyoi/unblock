@@ -51,6 +51,40 @@
     HIDDEN = new WeakSet();
   }
 
+  let revealed = [];
+
+  function revealBlocked() {
+    let nodes = [];
+    try {
+      nodes = document.querySelectorAll("[data-unblock-hidden]");
+    } catch (e) {
+      return;
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      try {
+        if (el.classList.contains("unblock-blocked")) continue;
+        const prev = el.getAttribute("data-unblock-orig") || "";
+        const prio = el.getAttribute("data-unblock-orig-prio") || "";
+        if (prev) el.style.setProperty("display", prev, prio);
+        else el.style.removeProperty("display");
+        el.classList.add("unblock-blocked");
+        revealed.push(el);
+      } catch (e) {}
+    }
+  }
+
+  function unrevealBlocked() {
+    for (let i = 0; i < revealed.length; i++) {
+      const el = revealed[i];
+      try {
+        el.classList.remove("unblock-blocked");
+        el.style.setProperty("display", "none", "important");
+      } catch (e) {}
+    }
+    revealed = [];
+  }
+
   function hide() {
     if (!filtering) return;
     for (let i = 0; i < SELECTORS.length; i++) {
@@ -106,6 +140,7 @@
     filtering = !!s.active && !!s.heuristics;
     if (filtering) hide();
     else if (was) restore();
+    if (pickerArmed) revealBlocked();
     if (!scriptletsRan && s.scriptlets) {
       scriptletsRan = true;
       runScriptlets();
@@ -134,16 +169,33 @@
         if (armTimer) clearTimeout(armTimer);
         armTimer = setTimeout(() => {
           pickerArmed = false;
+          unrevealBlocked();
         }, 120000);
+        revealBlocked();
       }
     });
   } catch (e) {}
 
   window.addEventListener("message", (ev) => {
     if (ev.source !== window || !ev.data) return;
-    if (ev.data.type !== "UNBLOCK_PICKED" || typeof ev.data.selector !== "string") return;
+    const data = ev.data;
+    if (data.type === "UNBLOCK_PICKER_END") {
+      pickerArmed = false;
+      if (armTimer) clearTimeout(armTimer);
+      unrevealBlocked();
+      return;
+    }
+    if (data.type === "UNBLOCK_UNPICK" && typeof data.selector === "string") {
+      const sel = data.selector.slice(0, 400).trim();
+      if (!sel || /[\x00-\x1f]/.test(sel)) return;
+      try {
+        chrome.runtime.sendMessage({ type: "removeCustomRule", rule: "##" + sel });
+      } catch (e) {}
+      return;
+    }
+    if (data.type !== "UNBLOCK_PICKED" || typeof data.selector !== "string") return;
     if (!pickerArmed) return;
-    const sel = ev.data.selector.slice(0, 400).trim();
+    const sel = data.selector.slice(0, 400).trim();
     if (!sel || /[\x00-\x1f]/.test(sel)) return;
     try {
       if (!document.querySelector(sel)) return;

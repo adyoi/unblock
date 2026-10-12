@@ -55,6 +55,11 @@
   opacity: 0.8;
 }
 
+.unblock-blocked {
+  outline: 2px dashed #f59e0b !important;
+  outline-offset: 2px !important;
+}
+
 .unblock-picked {
   outline: 2px dashed #e33 !important;
   outline-offset: 2px !important;

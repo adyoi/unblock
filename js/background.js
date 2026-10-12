@@ -527,6 +527,20 @@ async function handleMessage(msg, sender, sendResponse) {
     sendResponse({ ok: true, settings });
     return;
   }
+  if (msg.type === "removeCustomRule") {
+    const r = typeof msg.rule === "string" ? msg.rule.trim().slice(0, 4096) : "";
+    if (!r) {
+      sendResponse({ ok: false, error: "invalid_rule", settings });
+      return;
+    }
+    const i = settings.customRules.indexOf(r);
+    if (i !== -1) {
+      settings.customRules.splice(i, 1);
+      await commit(settings);
+    }
+    sendResponse({ ok: true, settings });
+    return;
+  }
   if (msg.type === "setAdvancedDefenses") {
     settings.advancedDefenses = !!msg.enabled;
     await commit(settings);
