@@ -52,8 +52,36 @@
   }
 
   let revealed = [];
+  let lastSnap = null;
+
+  function ruleFor(sel) {
+    let host = "";
+    try {
+      host = (location.hostname || "").toLowerCase();
+    } catch (e) {}
+    return (host ? host + "##" : "##") + sel;
+  }
+
+  function publishRules() {
+    let sels = [];
+    try {
+      sels = (lastSnap && lastSnap.customSelectors) || [];
+    } catch (e) {}
+    if (!sels.length) return;
+    try {
+      window.postMessage({ type: "UNBLOCK_RULESET", selectors: sels.slice(0, 500) }, "*");
+    } catch (e) {}
+  }
 
   function revealBlocked() {
+    for (let i = revealed.length - 1; i >= 0; i--) {
+      const el = revealed[i];
+      try {
+        if (el.getAttribute("data-unblock-hidden")) continue;
+        el.classList.remove("unblock-blocked");
+      } catch (e) {}
+      revealed.splice(i, 1);
+    }
     let nodes = [];
     try {
       nodes = document.querySelectorAll("[data-unblock-hidden]");
@@ -136,11 +164,12 @@
 
   function applyState(s) {
     if (!s) return;
+    lastSnap = s;
     const was = filtering;
     filtering = !!s.active && !!s.heuristics;
     if (filtering) hide();
     else if (was) restore();
-    if (pickerArmed) revealBlocked();
+    if (pickerArmed) { revealBlocked(); publishRules(); }
     if (!scriptletsRan && s.scriptlets) {
       scriptletsRan = true;
       runScriptlets();
@@ -172,9 +201,25 @@
           unrevealBlocked();
         }, 120000);
         revealBlocked();
+        publishRules();
+        return;
+      }
+      if (msg && msg.type === "pickerStop") {
+        pickerArmed = false;
+        if (armTimer) clearTimeout(armTimer);
+        try {
+          window.postMessage({ type: "UNBLOCK_PICKER_STOP" }, "*");
+        } catch (e) {}
+        unrevealBlocked();
       }
     });
   } catch (e) {}
+
+  function notifyPickerEnded() {
+    try {
+      chrome.runtime.sendMessage({ type: "pickerEnded" });
+    } catch (e) {}
+  }
 
   window.addEventListener("message", (ev) => {
     if (ev.source !== window || !ev.data) return;
@@ -183,13 +228,14 @@
       pickerArmed = false;
       if (armTimer) clearTimeout(armTimer);
       unrevealBlocked();
+      notifyPickerEnded();
       return;
     }
     if (data.type === "UNBLOCK_UNPICK" && typeof data.selector === "string") {
       const sel = data.selector.slice(0, 400).trim();
       if (!sel || /[\x00-\x1f]/.test(sel)) return;
       try {
-        chrome.runtime.sendMessage({ type: "removeCustomRule", rule: "##" + sel });
+        chrome.runtime.sendMessage({ type: "removeCustomRule", rule: ruleFor(sel) });
       } catch (e) {}
       return;
     }
@@ -203,7 +249,7 @@
       return;
     }
     try {
-      chrome.runtime.sendMessage({ type: "addCustomRule", rule: "##" + sel });
+      chrome.runtime.sendMessage({ type: "addCustomRule", rule: ruleFor(sel) });
     } catch (e) {}
   });
 })();

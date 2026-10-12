@@ -105,6 +105,21 @@ async function render() {
     sl.checked = !!host && (settings.scriptletsAllowlist || []).indexOf(host) !== -1;
     sl.disabled = !host;
   }
+
+  const pickerBtn = document.getElementById("picker");
+  if (pickerBtn) {
+    pickerBtn.disabled = !host;
+    let active = false;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        const res = await chrome.runtime.sendMessage({ type: "pickerState", tabId: tab.id });
+        active = !!(res && res.active);
+      }
+    } catch (e) {}
+    pickerBtn.textContent = active ? "Stop picking" : "Pick element";
+    pickerBtn.classList.toggle("warn", active);
+  }
 }
 
 // Listeners are bound before the first render: a single rejected await used to

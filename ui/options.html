@@ -14,6 +14,7 @@
       <h1>Unblock – Options</h1>
       <div class="actions">
         <button id="save">Save</button>
+        <button id="refresh">Refresh</button>
         <button id="export">Export</button>
         <input type="file" id="import" accept=".json,.txt" hidden>
         <button id="importBtn">Import</button>
@@ -22,10 +23,12 @@
     <main>
       <section>
         <h2>Custom Rules</h2>
-        <p class="hint">One per line. Examples: <code>##.ad-banner</code>, <code>###ads</code>,
-          <code>||ads.example.com</code>, <code>/ads/*.js</code>
+        <p class="hint">One per line. Examples: <code>##.ad-banner</code>,
+          <code>example.com | .ad-banner</code>, <code>||ads.example.com</code>,
+          <code>/ads/*.js</code>. Prefix a selector with a domain to scope it.
         </p>
         <textarea id="rules" spellcheck="false" placeholder="##.sponsored
+example.com | #main.wrap > section.hero > h1
 ||tracker.example.com
 /example-ad.js"></textarea>
       </section>

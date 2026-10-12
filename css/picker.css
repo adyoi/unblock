@@ -55,12 +55,22 @@
   opacity: 0.8;
 }
 
+.unblock-picked {
+  outline: 2px dashed #e33 !important;
+  outline-offset: 2px !important;
+}
+
 .unblock-blocked {
+  outline: 2px dashed #e33 !important;
+  outline-offset: 2px !important;
+}
+
+.unblock-unblocked {
   outline: 2px dashed #f59e0b !important;
   outline-offset: 2px !important;
 }
 
-.unblock-picked {
-  outline: 2px dashed #e33 !important;
+.unblock-locked {
+  outline: 2px solid #f59e0b !important;
   outline-offset: 2px !important;
 }

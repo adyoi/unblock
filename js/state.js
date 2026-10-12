@@ -34,7 +34,31 @@
     return "";
   }
 
-  function parseCustomSelectors(rules) {
+  function hostMatchesPrefix(prefix, host) {
+    const parts = String(prefix).split(",");
+    let hasPositive = false;
+    let matched = false;
+    for (let i = 0; i < parts.length; i++) {
+      let d = parts[i].trim().toLowerCase();
+      if (!d) continue;
+      const neg = d.charAt(0) === "~";
+      if (neg) d = d.slice(1).trim();
+      if (!d) continue;
+      const hit =
+        !!host &&
+        (host === d ||
+          (host.length > d.length && host.charAt(host.length - d.length - 1) === "." && host.slice(host.length - d.length) === d));
+      if (neg) {
+        if (hit) return false;
+      } else {
+        hasPositive = true;
+        if (hit) matched = true;
+      }
+    }
+    return hasPositive ? matched : true;
+  }
+
+  function parseCustomSelectors(rules, host) {
     const out = [];
     if (!Array.isArray(rules)) return out;
     for (let i = 0; i < rules.length && out.length < MAX_CUSTOM_SELECTORS; i++) {
@@ -45,8 +69,11 @@
       if (s.indexOf("#?#") !== -1 || s.indexOf("#@#") !== -1) continue;
       const at = s.indexOf("##");
       if (at === -1) continue;
+      const prefix = s.slice(0, at).trim();
       const sel = s.slice(at + 2).trim();
-      if (sel) out.push(sel);
+      if (!sel) continue;
+      if (prefix && !hostMatchesPrefix(prefix, host)) continue;
+      out.push(sel);
     }
     return out;
   }
@@ -80,7 +107,7 @@
       advanced: active && s.advancedDefenses !== false,
       heuristics: active && s.heuristicsEnabled !== false,
       scriptlets: active && allowlist.indexOf(host) === -1,
-      customSelectors: active ? parseCustomSelectors(s.customRules) : []
+      customSelectors: active ? parseCustomSelectors(s.customRules, host) : []
     };
   }
 

@@ -4,14 +4,36 @@ async function getSettings() {
   return res.settings;
 }
 
+function ruleToDisplay(rule) {
+  const at = rule.indexOf("##");
+  if (at > 0) {
+    const prefix = rule.slice(0, at).trim();
+    const sel = rule.slice(at + 2).trim();
+    if (prefix && !prefix.includes("#") && sel) return prefix + " | " + sel;
+  }
+  return rule;
+}
+
 function toText(arr) {
-  return (arr || []).join("\n");
+  return (arr || []).map(ruleToDisplay).join("\n");
+}
+
+function lineToRule(x) {
+  const m = /^([^|]+?)\s*\|\s*(\S.*)$/.exec(x);
+  if (m) {
+    const left = m[1].trim();
+    const right = m[2].trim();
+    if (left && !/\s/.test(left) && !left.startsWith("#") && !right.startsWith("##")) {
+      return left + "##" + right;
+    }
+  }
+  return x;
 }
 
 function fromRuleText(t) {
   return t
     .split(/\n+/)
-    .map((x) => x.trim())
+    .map((x) => lineToRule(x.trim()))
     .filter((x) => {
       if (!x || x.startsWith("!")) return false;
       if (x.startsWith("#") && !x.startsWith("##") && !x.startsWith("#@#") && !x.startsWith("#?#")) return false;
@@ -26,7 +48,7 @@ function fromDomainText(t) {
     .filter((x) => x && !x.startsWith("#") && !x.startsWith("!"));
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function refreshForm() {
   let s;
   try {
     s = await getSettings();
@@ -35,6 +57,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   document.getElementById("rules").value = toText(s.customRules);
   document.getElementById("whitelist").value = toText(s.whitelist);
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await refreshForm();
+
+  document.getElementById("refresh").addEventListener("click", refreshForm);
 
   document.getElementById("save").addEventListener("click", async () => {
     const customRules = fromRuleText(document.getElementById("rules").value);
