@@ -37,14 +37,6 @@ const CUSTOM_RESOURCE_TYPES = [
 ];
 const LOCAL_HOSTS = ["localhost", "local", "intranet"];
 
-const pickerTabs = new Set();
-
-try {
-  chrome.tabs.onRemoved.addListener((tabId) => {
-    pickerTabs.delete(tabId);
-  });
-} catch (e) {}
-
 function warn(label, err) {
   try {
     console.warn("unblock:", label, err);
@@ -582,8 +574,12 @@ async function handleMessage(msg, sender, sendResponse) {
           ? sender.tab.id
           : null;
     if (typeof tabId === "number") {
-      if (pickerTabs.has(tabId)) {
-        pickerTabs.delete(tabId);
+      let active = false;
+      try {
+        const res = await chrome.tabs.sendMessage(tabId, { type: "pickerStateQuery" });
+        active = !!(res && res.active);
+      } catch (e) {}
+      if (active) {
         try {
           await chrome.tabs.sendMessage(tabId, { type: "pickerStop" });
         } catch (e) {}
@@ -599,7 +595,6 @@ async function handleMessage(msg, sender, sendResponse) {
       try {
         await chrome.tabs.sendMessage(tabId, { type: "pickerStarted" });
       } catch (e) {}
-      pickerTabs.add(tabId);
       sendResponse({ ok: true, active: true });
       return;
     }
@@ -607,13 +602,6 @@ async function handleMessage(msg, sender, sendResponse) {
     return;
   }
   if (msg.type === "pickerEnded") {
-    const tabId =
-      typeof msg.tabId === "number"
-        ? msg.tabId
-        : sender && sender.tab && typeof sender.tab.id === "number"
-          ? sender.tab.id
-          : null;
-    if (typeof tabId === "number") pickerTabs.delete(tabId);
     sendResponse({ ok: true });
     return;
   }
@@ -624,7 +612,14 @@ async function handleMessage(msg, sender, sendResponse) {
         : sender && sender.tab && typeof sender.tab.id === "number"
           ? sender.tab.id
           : null;
-    sendResponse({ ok: true, active: typeof tabId === "number" && pickerTabs.has(tabId) });
+    let active = false;
+    if (typeof tabId === "number") {
+      try {
+        const res = await chrome.tabs.sendMessage(tabId, { type: "pickerStateQuery" });
+        active = !!(res && res.active);
+      } catch (e) {}
+    }
+    sendResponse({ ok: true, active });
     return;
   }
   sendResponse({ ok: false, error: "unknown" });

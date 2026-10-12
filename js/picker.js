@@ -155,5 +155,5 @@
   btnUndo.onclick = (e) => { e.stopPropagation(); undo(e); };
   btnCancel.onclick = (e) => { e.stopPropagation(); cleanup(); };
   btnExit.onclick = (e) => { e.stopPropagation(); cleanup(); };
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') cleanup(); }, { once: true });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (e.preventDefault) e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); cleanup(); } }, { once: true, capture: true });
 })();

@@ -18,7 +18,6 @@
   let filtering = false;
   let scriptletsRan = false;
   let pickerArmed = false;
-  let armTimer = 0;
 
   function isProtected(el) {
     if (!el || el.nodeType !== 1) return true;
@@ -192,21 +191,19 @@
   setTimeout(hide, 1500);
 
   try {
-    chrome.runtime.onMessage.addListener((msg) => {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg && msg.type === "pickerStateQuery") {
+        sendResponse({ active: pickerArmed });
+        return;
+      }
       if (msg && msg.type === "pickerStarted") {
         pickerArmed = true;
-        if (armTimer) clearTimeout(armTimer);
-        armTimer = setTimeout(() => {
-          pickerArmed = false;
-          unrevealBlocked();
-        }, 120000);
         revealBlocked();
         publishRules();
         return;
       }
       if (msg && msg.type === "pickerStop") {
         pickerArmed = false;
-        if (armTimer) clearTimeout(armTimer);
         try {
           window.postMessage({ type: "UNBLOCK_PICKER_STOP" }, "*");
         } catch (e) {}
@@ -226,7 +223,6 @@
     const data = ev.data;
     if (data.type === "UNBLOCK_PICKER_END") {
       pickerArmed = false;
-      if (armTimer) clearTimeout(armTimer);
       unrevealBlocked();
       notifyPickerEnded();
       return;
