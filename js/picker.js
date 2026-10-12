@@ -43,21 +43,18 @@
     target = el; if (last === el) return; last = el;
     const r = el.getBoundingClientRect();
     box.style.top = r.top + 'px'; box.style.left = r.left + 'px'; box.style.width = r.width + 'px'; box.style.height = r.height + 'px';
-    toolbar.style.display = flex;     toolbar.style.top = Math.max(4, window.scrollY + r.top - 36) + 'px'; toolbar.style.left = Math.max(4, window.scrollX + r.left) + 'px';
+    toolbar.style.display = 'flex';     toolbar.style.top = Math.max(4, window.scrollY + r.top - 36) + 'px'; toolbar.style.left = Math.max(4, window.scrollX + r.left) + 'px';
   }
   function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} history.push({ el }); }
   function pick(e) { if (e && e.target && toolbar.contains(e.target)) return; if (e && e.preventDefault) e.preventDefault(); if (e && e.stopPropagation) e.stopPropagation(); if (!target) return; const sel=getSelector(target); if (sel) applyRule(sel,target); cleanup(); }
   function blockParent(e) { if (e && e.stopPropagation) e.stopPropagation(); if (!target || !target.parentElement) return; const p=target.parentElement; const sel=getSelector(p); if (sel) applyRule(sel,p); target=p; highlight({target:p}); }
   function undo(e) { if (e && e.stopPropagation) e.stopPropagation(); const last=history.pop(); if (last && last.el) { try { last.el.classList.remove('unblock-picked'); } catch (e) {} } }
-  function cleanup() { try { document.removeEventListener('mousemove', highlight, true); document.removeEventListener('click', pick, true); } catch (e) {} try { overlay.remove(); box.remove(); toolbar.remove(); } catch (e) {} window.__uboPickerActive = false; try { document.body.style.cursor=''; } catch (e) {} }
   try { document.body.style.cursor='crosshair'; } catch (e) {}
-  document.addEventListener('mousemove', highlight, true); document.addEventListener('click', pick, true);
   const btnBlock = document.querySelector('#block-element');
   // btnParent already created above
   const btnUndoEl = document.querySelector('#block-undo');
   const btnCancelEl = document.querySelector('#block-cancel');
   const btnExitEl = document.querySelector('#block-exit');
-  if (btnBlock) btnBlock.onclick = (e) => { e.stopPropagation(); pick(e); };
   if (btnParent) btnParent.onclick = (e) => { e.stopPropagation(); blockParent(e); };
   if (btnUndoEl) btnUndoEl.onclick = (e) => { e.stopPropagation(); undo(e); };
   if (btnCancelEl) btnCancelEl.onclick = (e) => { e.stopPropagation(); cleanup(); };
