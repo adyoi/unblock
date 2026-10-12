@@ -43,7 +43,7 @@
     target = el; if (last === el) return; last = el;
     const r = el.getBoundingClientRect();
     box.style.top = r.top + 'px'; box.style.left = r.left + 'px'; box.style.width = r.width + 'px'; box.style.height = r.height + 'px';
-    toolbar.style.top = Math.max(4, window.scrollY + r.top - 36) + 'px'; toolbar.style.left = Math.max(4, window.scrollX + r.left) + 'px';
+    toolbar.style.display = flex;     toolbar.style.top = Math.max(4, window.scrollY + r.top - 36) + 'px'; toolbar.style.left = Math.max(4, window.scrollX + r.left) + 'px';
   }
   function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} history.push({ el }); }
   function pick(e) { if (e && e.target && toolbar.contains(e.target)) return; if (e && e.preventDefault) e.preventDefault(); if (e && e.stopPropagation) e.stopPropagation(); if (!target) return; const sel=getSelector(target); if (sel) applyRule(sel,target); cleanup(); }
