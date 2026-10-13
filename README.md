@@ -1,5 +1,7 @@
 # Unblock
 
+![Unblock](./store/marquee.png)
+
 > Lightweight, privacy-first MV3 content blocker. Inspired by uBlock Origin, restructured and optimized for Chromium Manifest V3 with practical trade-offs clearly documented.
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](./manifest.json)

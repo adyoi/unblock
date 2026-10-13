@@ -30,13 +30,41 @@
     } catch (e) {}
   }
   ensureMounted();
-  let target = null, last = null, locked = null, history = [], pageSelectors = [], marked = [];
+  let target = null, last = null, locked = null, history = [], pageSelectors = [], marked = [], pending = new Map();
   function getSelector(el) {
     if (!(el instanceof Element)) return null;
     if (el === document.body || el === document.documentElement) return null;
-    if (el.id) { try { return '#' + CSS.escape(el.id); } catch (e) { return '#' + el.id; } }
+    function unique(sel) {
+      if (!sel) return null;
+      try {
+        const n = document.querySelectorAll(sel);
+        if (n.length === 1) return sel;
+        let cur = el;
+        let idx = 0;
+        while (cur) {
+          if (cur.parentElement) {
+            const sibs = Array.prototype.slice.call(cur.parentElement.children).filter(x => x.tagName === cur.tagName);
+            if (sibs.length > 1) { idx = sibs.indexOf(cur) + 1; break; }
+          }
+          cur = cur.parentElement;
+        }
+        if (idx) { const nth = sel + ':nth-of-type(' + idx + ')'; try { if (document.querySelectorAll(nth).length === 1) return nth; } catch (e) {} }
+        cur = el;
+        idx = 0;
+        while (cur) {
+          if (cur.parentElement) {
+            const sibs = Array.prototype.slice.call(cur.parentElement.children);
+            if (sibs.length > 1) { idx = sibs.indexOf(cur) + 1; break; }
+          }
+          cur = cur.parentElement;
+        }
+        if (idx) { const nth = sel + ':nth-child(' + idx + ')'; try { if (document.querySelectorAll(nth).length === 1) return nth; } catch (e) {} }
+      } catch (e) {}
+      return sel;
+    }
+    if (el.id) { try { return unique('#' + CSS.escape(el.id)); } catch (e) { return unique('#' + el.id); } }
     const parts = []; let cur = el, depth = 0;
-    while (cur && cur.nodeType === 1 && cur !== document.body && cur !== document.documentElement && depth < 5) {
+    while (cur && cur.nodeType === 1 && cur !== document.body && cur !== document.documentElement && depth < 6) {
       let tag = cur.tagName.toLowerCase();
       if (cur.classList && cur.classList.length) {
         const cls = Array.from(cur.classList).filter(c => !(c.indexOf('unblock-') === 0)).slice(0,2).map(c=>{try{return CSS.escape(c)}catch(e){return c}}).join('.');
@@ -44,7 +72,7 @@
       }
       parts.unshift(tag); if (cur.id) break; cur = cur.parentElement; depth++;
     }
-    if (parts.length === 0) return null; return parts.join(' > ');
+    if (parts.length === 0) return null; return unique(parts.join(' > '));
   }
   function placeToolbar(el) {
     if (!el) return;
@@ -85,7 +113,8 @@
     applyCursor();
     placeToolbar(locked);
   }
-  function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} history.push({ el, sel }); }
+  let pickId = 0;
+  function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} pickId++; const id = pickId; const entry = { el, sel }; history.push(entry); pending.set(id, entry); try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel, id: id }, '*'); } catch (e) {} }
   function releaseLock() { if (locked) { try { locked.classList.remove('unblock-locked'); } catch (e) {} } locked = null; try { box.style.display = ''; } catch (e) {} applyCursor(); }
   function markUnblocked(el) {
     if (!el) return;
@@ -143,6 +172,11 @@
     if (ev.source !== window || !ev.data) return;
     if (ev.data.type === 'UNBLOCK_RULESET' && Array.isArray(ev.data.selectors)) {
       pageSelectors = ev.data.selectors.filter((s) => typeof s === 'string');
+      return;
+    }
+    if (ev.data.type === 'UNBLOCK_PICK_ACK' && ev.data.id) {
+      const id = ev.data.id; const p = pending.get(id);
+      if (p) { pending.delete(id); history.push(p); }
       return;
     }
     if (ev.data.type === 'UNBLOCK_PICKER_STOP') { cleanup(); }
