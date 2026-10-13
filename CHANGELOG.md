@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Element Picker state colors**: hover = red solid, click/lock = orange solid,
+  blocked/picked = red dashed, unblocked/undo = orange dashed. Hover is frozen
+  and the cursor returns to normal once an element is locked.
+- **Picker toggle**: the popup "Pick element" button now toggles to "Stop
+  picking"; the content script's `pickerArmed` flag is the live source of truth
+  (queried via `pickerStateQuery`), so the toggle survives service-worker
+  suspension. Pressing **Escape** stops the picker.
+- **Undo as unblock**: Undo removes the custom rule matching the locked element
+  (not only the current session's block) and the element reappears.
+- **Domain-scoped custom rules**: cosmetic hides are stored as `host##selector`
+  and shown in the options editor as `domain | selector`. Added a **Refresh**
+  button to reload the editor from storage.
+
 ### Fixed
+
+- **Picker unreachable after lock**: picker listeners now run on `window`
+  **capture** and re-mount their nodes if removed, so a page's
+  `stopPropagation` or DOM cleanup can no longer break locking or `Escape`.
+- **Toolbar position** used page coordinates on a `position: fixed` element,
+  placing it off-screen on scrolled pages; it now uses viewport coordinates.
 
 - **Backunder / clickunder chain (Videcloud-style players).** Two new layers
   stop the redirect chain that kicks the playing tab from its video page to an

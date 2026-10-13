@@ -117,22 +117,29 @@ generated preview (`python tools/generate-store-assets.py`).
 - **Enable blocking**: Master toggle. Persists across sessions.
 - **Block this site**: Informational (static DNR; use Custom Rules/Element Picker for per-site cosmetic).
 - **Allow this site**: Adds current hostname to whitelist (network+cosmetic heuristics remain passive on allowlisted context; scriptlets still run at document_start but are low-risk; consider toggling OFF if site breaks critically).
-- **Pick element**: Injects picker overlay, highlights hovered element, saves generated selector as `##<selector>`.
+- **Pick element**: Toggles the picker. Starts the overlay ("Stop picking" while active); clicking it again, or pressing `Escape`, stops it. The saved selector is scoped to the current host (`host##selector`).
 - **Whitelisted**: Remove entries with Remove.
 
 ### Options
-- **Custom Rules**: One per line. Supported forms:
-  - Cosmetic hide: `##.class`, `###id`, `##div > .ad`
+- **Custom Rules**: One per line. Each cosmetic hide is scoped to a domain and shown as `domain | selector` (stored internally as adblock syntax `domain##selector`). Supported forms:
+  - Cosmetic hide (domain-scoped): `example.com | .ad`, `example.com | #banner`, `example.com | div > .ad`
+  - Cosmetic hide (any site): `##.class`, `###id`, `##div > .ad`
+  - Adblock-style domain hide: `example.com##.ad`, `example.com###id`
   - Domain block (DNR): `||example.com`, `||ads.example.net`
   - Path pattern: `/ads/`, `/banner*.js`
   - Comments: lines starting `#` are ignored on import (fromText filters `#`)
+- **Refresh**: Reload the editor back to the stored rules (discard unsaved text edits).
 - **Whitelist**: Hostnames (exact). Applied at runtime context (UI only; DNR allowlisting not auto-generated here to avoid rule bloat).
-- **Import/Export**: JSON `{customRules[], whitelist[], exportedAt}` or paste raw rules text.
+- **Import/Export**: JSON `{customRules[], whitelist[], exportedAt}` or paste raw rules text. Import accepts both `domain | selector` and adblock `domain##selector` forms.
 
 ### Element Picker Behavior
-- Traverses up to depth 4, prefers ID if present, else tag + up to 2 classes (CSS-escaped).
-- Adds `data-unblock-hidden` + `display:none !important` via cosmetic layer when applied.
-- Picker self-cleans on Escape/Cancel/Exit/click.
+- Selector generation: traverses up to depth 4, prefers ID if present, else tag + up to 2 classes (CSS-escaped); marker classes (`unblock-picked`, `unblock-blocked`) are excluded.
+- Border states: **hover** = red solid; **click/lock** = orange solid; **blocked/picked** = red dashed; **unblocked/undo** = orange dashed.
+- While an element is locked, hover is frozen and the cursor returns to normal, so moving the mouse no longer changes the target.
+- Toolbar actions: **Block element**, **Block parent**, **Undo** (removes this session's block, or the existing rule matching the locked element), **Cancel**/**Exit**.
+- Blocking writes a domain-scoped rule (`host##selector`) to Custom Rules immediately; **Undo** removes it. Esc/Cancel/Exit keep whatever was applied and clean up the overlay.
+- Pressing **Escape** stops the picker (registered on capture, so pages that swallow keydown cannot block it). The popup button toggles start/stop; `pickerArmed` in the content script is the live source of truth, so the toggle survives service-worker suspension.
+- Applies `data-unblock-hidden` + `display:none !important` via the cosmetic layer; hidden elements are revealed with a red dashed outline while picking and restored on stop.
 
 ### Scriptlets Notes
 - Run at `document_start` (ISOLATED world). Designed defensive-only (no arbitrary remote eval).
@@ -220,8 +227,8 @@ D:\Project\ublock-origin/
 - Whitelist entries survive restarts and disable all filtering for that domain until removed. The popup shows a "Paused on this site" state, highlights the current entry, and offers both a per-domain toggle and "Clear all".
 
 ### Messaging
-- Runtime messages: `getSettings,toggle,addWhitelist,removeWhitelist,clearWhitelist,saveCustomRules,addCustomRule,setAdvancedDefenses,setHeuristics,toggleScriptletsAllowlist,startPicker`.
-- Window postMessage bridge for picker injection (safe origin same-page).
+- Runtime messages: `getSettings,toggle,addWhitelist,removeWhitelist,clearWhitelist,saveCustomRules,addCustomRule,removeCustomRule,setAdvancedDefenses,setHeuristics,toggleScriptletsAllowlist,startPicker,pickerStop,pickerState,pickerStateQuery,pickerEnded`.
+- Window postMessage bridge for the picker (`UNBLOCK_PICKED`, `UNBLOCK_UNPICK`, `UNBLOCK_RULESET`, `UNBLOCK_PICKER_STOP`, `UNBLOCK_PICKER_END`; same-origin page only).
 
 ## Security & Privacy
 
@@ -258,7 +265,8 @@ python tools/verify.py dist/unblock-1.0.0.zip
 - [ ] **Refresh the same page 3+ times** — blocking must still be active on every refresh, not just the first
 - [ ] **Play a video, then advance to the next video** — playback keeps working and popups stay blocked
 - [ ] BFCache: navigate away and back → guard still sealed
-- [ ] Element Picker: hover highlights, click saves `##...`, element hidden after reload/apply
+- [ ] Element Picker: Pick element toggles on ("Stop picking"); hover = red solid, click = orange solid, Block = red dashed, Undo = orange dashed; Esc/stop keeps the applied rule and the element stays hidden after reload/apply
+- [ ] Element Picker: Undo on an existing blocked element removes its Custom Rule and the element reappears after stopping
 - [ ] YouTube: playback stable, fewer ad slots (scriptlets baseline)
 - [ ] Dynamic sites (infinite scroll): pagination and "read more" links are still visible and clickable
 - [ ] Import/Export JSON + raw text
