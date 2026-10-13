@@ -39,7 +39,7 @@
     while (cur && cur.nodeType === 1 && cur !== document.body && cur !== document.documentElement && depth < 5) {
       let tag = cur.tagName.toLowerCase();
       if (cur.classList && cur.classList.length) {
-        const cls = Array.from(cur.classList).filter(c => c !== 'unblock-picked' && c !== 'unblock-blocked').slice(0,2).map(c=>{try{return CSS.escape(c)}catch(e){return c}}).join('.');
+        const cls = Array.from(cur.classList).filter(c => !(c.indexOf('unblock-') === 0)).slice(0,2).map(c=>{try{return CSS.escape(c)}catch(e){return c}}).join('.');
         if (cls) tag += '.' + cls;
       }
       parts.unshift(tag); if (cur.id) break; cur = cur.parentElement; depth++;

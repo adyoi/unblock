@@ -106,7 +106,7 @@
       const el = revealed[i];
       try {
         el.classList.remove("unblock-blocked");
-        el.style.setProperty("display", "none", "important");
+        if (el.getAttribute("data-unblock-hidden")) el.style.setProperty("display", "none", "important");
       } catch (e) {}
     }
     revealed = [];
