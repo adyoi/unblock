@@ -1,6 +1,6 @@
 # Unblock
 
-![Unblock](./store/marquee.png)
+![Unblock](./store/banner.png)
 
 > Lightweight, privacy-first MV3 content blocker. Inspired by uBlock Origin, restructured and optimized for Chromium Manifest V3 with practical trade-offs clearly documented.
 
@@ -88,7 +88,7 @@ generated preview (`python tools/generate-store-assets.py`).
 | `replace=` (response body) | Not supported | Limited/Firefox | Requires full response interception (impossible in MV3). |
 | CNAME Uncloaking | Not supported | Varies | Not exposed via DNR. |
 | Real-Time Request Logger | No | Yes | MV3 lacks live `webRequest` stream access required for full logger. |
-| Element Picker Coverage | Good (CSS-based) | Excellent | Selector depth limited (depth<=4, class-trim) to avoid overly brittle selectors. |
+| Element Picker Coverage | Good (CSS-based) | Excellent | Selector depth limited (depth<=6, class-trim) to avoid overly brittle selectors. |
 | Max DNR Rules | Browser-limited | N/A | Rules are split across 4 resources; total count still constrained by Chromium. |
 
 > Unblock prioritizes **stability, predictability & privacy** over maximum filter expressiveness.
@@ -124,18 +124,18 @@ generated preview (`python tools/generate-store-assets.py`).
 
 ### Options
 - **Custom Rules**: One per line. Each cosmetic hide is scoped to a domain and shown as `domain | selector` (stored internally as adblock syntax `domain##selector`). Supported forms:
-  - Cosmetic hide (domain-scoped): `example.com | .ad`, `example.com | #banner`, `example.com | div > .ad`
-  - Cosmetic hide (any site): `##.class`, `###id`, `##div > .ad`
-  - Adblock-style domain hide: `example.com##.ad`, `example.com###id`
-  - Domain block (DNR): `||example.com`, `||ads.example.net`
-  - Path pattern: `/ads/`, `/banner*.js`
+  - Cosmetic hide (any site): `##.ad-banner`, `###id`, `##div > .ad`
+  - Cosmetic hide (domain-scoped): `example.com | .ad-banner`, `example.com | #banner`, `example.com | div > .ad`
+  - Adblock-style domain hide: `example.com##.ad-banner`, `example.com###id`
+  - Domain block (DNR): `||ads.example.com`, `||example.com`
+  - Path pattern: `/ads/*.js`, `/ads/`, `/banner*.js`
   - Comments: lines starting `#` are ignored on import (fromText filters `#`)
 - **Refresh**: Reload the editor back to the stored rules (discard unsaved text edits).
 - **Whitelist**: Hostnames (exact). Applied at runtime context (UI only; DNR allowlisting not auto-generated here to avoid rule bloat).
 - **Import/Export**: JSON `{customRules[], whitelist[], exportedAt}` or paste raw rules text. Import accepts both `domain | selector` and adblock `domain##selector` forms.
 
 ### Element Picker Behavior
-- Selector generation: traverses up to depth 4, prefers ID if present, else tag + up to 2 classes (CSS-escaped); marker classes (`unblock-picked`, `unblock-blocked`) are excluded.
+- Selector generation: traverses up to depth 6, prefers ID if present, else tag + up to 2 classes (CSS-escaped); marker classes (`unblock-picked`, `unblock-blocked`) are excluded.
 - Border states: **hover** = red solid; **click/lock** = orange solid; **blocked/picked** = red dashed; **unblocked/undo** = orange dashed.
 - While an element is locked, hover is frozen and the cursor returns to normal, so moving the mouse no longer changes the target.
 - Toolbar actions: **Block element**, **Block parent**, **Undo** (removes this session's block, or the existing rule matching the locked element), **Cancel**/**Exit**.
@@ -327,7 +327,7 @@ python -m json.tool rules/*.json
 - `document_start` execution; ISOLATED world for cosmetic/scriptlets, MAIN world only for the popup guard
 - Observer coalesced (rAF), timeouts reduced/kept minimal (800/1500/2500)
 - Rule resources split (smaller, cacheable, modular)
-- Selector generation shallow (depth<=4) → fewer brittle rules
+- Selector generation shallow (depth<=6) → fewer brittle rules
 - Icon state updates throttled to tab events (onActivated/onStartup/onInstalled)
 - Popup closes after picker trigger (better UX)
 
