@@ -587,8 +587,7 @@ sealOpen();
         if (opensNewTab(e, node)) {
           vetoHard(e, node);
           return;
-        }
-        if (isAdish(href)) {
+        } else if (isAdish(href)) {
           vetoHard(e, node);
           return;
         }
