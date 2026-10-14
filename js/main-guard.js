@@ -304,9 +304,7 @@ sealOpen();
             return nativeClick.apply(this, arguments);
           }
           const href = this.getAttribute('href') || '';
-          const target = (this.getAttribute('target') || '').toLowerCase();
 
-          if (BLOCK_TARGETS.has(target)) return undefined;
           if (href) {
             if (isAdish(href)) return undefined;
             if (href.toLowerCase().indexOf('javascript:') === 0) {
@@ -363,9 +361,7 @@ sealOpen();
             this.getAttribute('href') ||
             (this.getAttribute && this.getAttribute('xlink:href')) ||
             '';
-          const target = (this.getAttribute('target') || '').toLowerCase();
-          if (BLOCK_TARGETS.has(target)) blocked = true;
-          else if (href && isAdish(href)) blocked = true;
+          if (href && isAdish(href)) blocked = true;
           else if (href && href.toLowerCase().indexOf('javascript:') === 0) {
             const body = decodeURIComponent(href.slice(11));
             if (body.includes('window.open') || body.includes('location')) blocked = true;
@@ -541,13 +537,35 @@ sealOpen();
 
   // A click is a new-tab attempt when the element asks for a popup target, or
   // when the gesture itself forces one (middle click, ctrl/cmd/shift click).
-  // Matching only ad-looking hrefs was the leak: an ordinary https URL on
-  // target=_blank opened a tab every time.
   const opensNewTab = (e, anchor) => {
     const target = (anchor.getAttribute('target') || '').toLowerCase();
     if (target && BLOCK_TARGETS.has(target)) return true;
     if (e.type === 'auxclick') return e.button === 1;
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return true;
+    return false;
+  };
+
+  // Ordinary target=_blank links must keep working, so a new-tab attempt is
+  // only vetoed when it looks like a popunder: an anchor whose href is ad-like
+  // (handled before this) or an invisible/positioned overlay stacked on a media
+  // player. A visible link with text, or one wrapping an image, is left alone.
+  const isPopunderSurface = (e, anchor) => {
+    if (!opensNewTab(e, anchor)) return false;
+    if (isMediaNode(anchor, 2)) return true;
+    let text = '';
+    try { text = (anchor.textContent || '').trim(); } catch (err) {}
+    if (text) return false;
+    try {
+      if (anchor.children && anchor.children.length) return false;
+      if (typeof window.getComputedStyle === 'function') {
+        const st = window.getComputedStyle(anchor);
+        if (st) {
+          if (st.position === 'fixed' || st.position === 'absolute') return true;
+          const op = parseFloat(st.opacity);
+          if (!isNaN(op) && op <= 0.1) return true;
+        }
+      }
+    } catch (err) {}
     return false;
   };
 
@@ -584,10 +602,11 @@ sealOpen();
             return;
           }
         }
-        if (opensNewTab(e, node)) {
+        if (isAdish(href)) {
           vetoHard(e, node);
           return;
-        } else if (isAdish(href)) {
+        }
+        if (isPopunderSurface(e, node)) {
           vetoHard(e, node);
           return;
         }

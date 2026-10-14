@@ -323,13 +323,14 @@ function run() {
   eq(r4, null, "replaced window.open must still return null");
   eq(openedTabs.length, 0, "page hijack must not be able to open a tab");
 
-  // 6. new-tab attempts must be blocked even with a perfectly clean URL
+  // 6. a clean target=_blank link is intentional navigation, so it stays open;
+  //    only ad-like hrefs or popunder overlays are vetoed.
   const cleanBlank = makeEl("a", { href: "https://example.com/page", target: "_blank" });
   const cleanClick = fire("click", makeEvent("click", { target: cleanBlank }));
-  eq(cleanClick.defaultPrevented, true, "target=_blank with a clean URL must still be blocked");
+  eq(cleanClick.defaultPrevented, false, "target=_blank with a clean URL must be allowed");
 
   const ctrlClick = fire("click", makeEvent("click", { target: cleanBlank, ctrlKey: true }));
-  eq(ctrlClick.defaultPrevented, true, "ctrl+click must be blocked");
+  eq(ctrlClick.defaultPrevented, false, "ctrl+click on a clean link must be allowed");
 
   const plain = makeEl("a", { href: "https://example.com/page" });
   const plainClick2 = fire("click", makeEvent("click", { target: plain }));
@@ -375,15 +376,15 @@ function run() {
   const svgLink = makeEl("a", { href: "https://example.com/x", target: "_blank" });
   svgLink.tagName = "a";
   const svgEv = fire("click", makeEvent("click", { target: svgLink }));
-  eq(svgEv.defaultPrevented, true, "SVG <a> (lowercase tagName) target=_blank must be blocked");
+  eq(svgEv.defaultPrevented, false, "SVG <a> (lowercase tagName) with a clean target=_blank must be allowed");
 
   const areaEv2 = fire("click", makeEvent("click", { target: makeEl("area", { href: "https://example.com/map", target: "_blank" }) }));
-  eq(areaEv2.defaultPrevented, true, "AREA target=_blank click must be blocked");
+  eq(areaEv2.defaultPrevented, false, "clean AREA target=_blank click must be allowed");
 
   win.SVGAElement.prototype.click.call(makeEl("svg", { href: "https://example.com/x", target: "_blank" }));
-  eq(env.svgClicked.length, 0, "SVGAElement.click on target=_blank must be blocked");
+  eq(env.svgClicked.length, 1, "SVGAElement.click on a clean target=_blank must be allowed");
   win.SVGAElement.prototype.click.call(makeEl("svg", { href: "https://example.com/x" }));
-  eq(env.svgClicked.length, 1, "SVGAElement.click on a clean svg anchor must still work");
+  eq(env.svgClicked.length, 2, "SVGAElement.click on a clean svg anchor must still work");
 
   win.HTMLAreaElement.prototype.click.call(makeEl("area", { href: "https://ads.example.net/x", target: "_blank" }));
   eq(env.areaClicked.length, 0, "HTMLAreaElement.click on ad target=_blank must be blocked");
