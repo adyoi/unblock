@@ -18,7 +18,7 @@ STAGE = os.path.join(DIST, ".stage")
 
 # Ship these. Anything not listed here stays out of the package.
 INCLUDE_FILES = ["manifest.json", "LICENSE"]
-INCLUDE_DIRS = ["css", "icons", "js", "rules", "ui"]
+INCLUDE_DIRS = ["css", "icons", "js", "rules", "ui", "_locales"]
 
 EXCLUDE_DIRS = {"__pycache__", ".git", ".github", "_metadata", "node_modules"}
 EXCLUDE_EXT = {".pyc", ".map", ".log", ".tmp", ".bak", ".md"}

@@ -1,3 +1,6 @@
+const i18n = window.__unblockI18n || { t: (k, f) => (f != null ? f : k), applyStaticI18n() {} };
+const tr = i18n.t;
+
 async function getSettings() {
   try {
     const res = await chrome.runtime.sendMessage({ type: "getSettings" });
@@ -38,11 +41,11 @@ async function render() {
 
   if (status) {
     if (isAllowed) {
-      status.textContent = "Paused on this site";
+      status.textContent = tr("pausedOnSite", "Paused on this site");
       status.classList.remove("on", "off");
       status.classList.add("warn");
     } else {
-      status.textContent = settings.enabled ? "Blocking ON" : "Blocking OFF";
+      status.textContent = settings.enabled ? tr("blockingOn", "Blocking ON") : tr("blockingOff", "Blocking OFF");
       status.classList.remove("warn");
       status.classList.toggle("on", !!settings.enabled);
       status.classList.toggle("off", !settings.enabled);
@@ -57,10 +60,10 @@ async function render() {
     allowBtn.disabled = !host;
     allowBtn.classList.toggle("warn", isAllowed);
     allowBtn.textContent = !host
-      ? "Unavailable"
+      ? tr("unavailable", "Unavailable")
       : isAllowed
-        ? "Unblock this site"
-        : "Whitelist site";
+        ? tr("unblockSite", "Unblock this site")
+        : tr("whitelistSite", "Whitelist site");
   }
 
   const list = document.getElementById("whitelist");
@@ -74,7 +77,7 @@ async function render() {
       span.textContent = d;
       const btn = document.createElement("button");
       btn.className = "danger";
-      btn.textContent = "Remove";
+      btn.textContent = tr("remove", "Remove");
       btn.dataset.rm = d;
       div.appendChild(span);
       div.appendChild(btn);
@@ -85,14 +88,14 @@ async function render() {
   const clearBtn = document.getElementById("clearWl");
   if (clearBtn) {
     clearBtn.hidden = wl.length === 0;
-    clearBtn.textContent = wl.length ? "Clear all (" + wl.length + ")" : "Clear all";
+    clearBtn.textContent = wl.length ? tr("clearAllCount", "Clear all (" + wl.length + ")", [String(wl.length)]) : tr("clearAll", "Clear all");
   }
 
   // Empty-state copy lives here rather than only in the markup, so it survives
   // any future re-render even if the static HTML is trimmed.
   const empty = document.getElementById("wlEmpty");
   if (empty) {
-    empty.textContent = "Empty";
+    empty.textContent = tr("empty", "Empty");
     empty.hidden = wl.length !== 0;
   }
 
@@ -117,7 +120,7 @@ async function render() {
         active = !!(res && res.active);
       }
     } catch (e) {}
-    pickerBtn.textContent = active ? "Stop picking" : "Pick element";
+    pickerBtn.textContent = active ? tr("stopPicking", "Stop picking") : tr("pickElement", "Pick element");
     pickerBtn.classList.toggle("warn", active);
   }
 }
@@ -216,6 +219,8 @@ function bind() {
     });
   }
 }
+
+i18n.applyStaticI18n();
 
 bind();
 

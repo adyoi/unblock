@@ -36,6 +36,52 @@ const SCRIPTLETS = {
       const orig = window.open;
       window.open = function(){ return null; };
     }catch(e){}
+  },
+  // Safe subset of uBO's abort-current-script: redefine a (possibly nested)
+  // property so that reading it throws, which stops the offending script.
+  'abort-current-script': function(prop){
+    try{
+      if(typeof prop !== 'string' || !prop) return;
+      const parts = prop.split('.');
+      let owner = window;
+      for(let i=0; i<parts.length-1; i++){
+        owner = owner[parts[i]];
+        if(!owner) return;
+      }
+      const last = parts[parts.length-1];
+      if(!last) return;
+      try{
+        Object.defineProperty(owner, last, {
+          get: function(){ throw new ReferenceError('unblock: aborted ' + prop); },
+          set: function(){},
+          configurable: true
+        });
+      }catch(e){}
+    }catch(e){}
+  },
+  // Safe subset of uBO's remove-class: strip a class from matching elements and
+  // keep stripping it as the page re-adds it.
+  'remove-class': function(cls, sel){
+    try{
+      if(typeof cls !== 'string' || !cls) return;
+      let esc = cls;
+      try{ if(typeof CSS !== 'undefined' && CSS.escape) esc = CSS.escape(cls); }catch(e){}
+      const selector = (typeof sel === 'string' && sel) ? sel : '.' + esc;
+      const strip = function(root){
+        try{
+          const scope = root && root.querySelectorAll ? root : document;
+          const nodes = scope.querySelectorAll(selector);
+          for(let i=0; i<nodes.length; i++){
+            try{ if(nodes[i] && nodes[i].classList) nodes[i].classList.remove(cls); }catch(e){}
+          }
+        }catch(e){}
+      };
+      strip();
+      if(typeof MutationObserver === 'function' && (document.documentElement || document.body)){
+        const mo = new MutationObserver(function(){ strip(); });
+        mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+      }
+    }catch(e){}
   }
 };
 function runScriptlets(list){

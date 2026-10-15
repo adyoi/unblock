@@ -12,4 +12,18 @@ h2{font-weight:600}
 .hint{color:#bdbdbd;font-size:13px;overflow-wrap:break-word}
 code{background:#262626;border:1px solid #3a3a3a;border-radius:6px;padding:1px 4px;overflow-wrap:anywhere}
 textarea{width:100%;min-height:160px;background:#121212;color:#eee;border:1px solid #3a3a3a;border-radius:8px;padding:10px;resize:vertical;font-family:Consolas,monospace;font-size:13px}
+.status-list{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.status-summary{display:flex;gap:10px;color:#bdbdbd}
+.status-summary .ok{color:#7ddc7d}
+.status-summary .warn{color:#ffd666}
+.status-summary .err{color:#ff8a85}
+.status-item{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.status-item.err{color:#ff8a85}
+.status-item.warn{color:#ffd666}
+.row-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row-inline input[type=url]{flex:1;min-width:220px;background:#121212;color:#eee;border:1px solid #3a3a3a;border-radius:8px;padding:8px 10px}
+.row-inline input[type=checkbox]{width:15px;height:15px;accent-color:#e53935}
+.status-text{color:#bdbdbd;font-size:12px}
+.status-text.ok{color:#7ddc7d}
+.status-text.err{color:#ff8a85}
 ul{padding-left:18px;display:flex;flex-direction:column;gap:6px}

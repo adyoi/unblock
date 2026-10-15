@@ -48,6 +48,8 @@ function buildEnv() {
   const enabled = new Set(STATIC);
   const registered = new Map();
   const io = { icons: [], css: [], script: [], tabMsgs: [], enabledCalls: [] };
+  const fetchCalls = [];
+  let fetchImpl = null;
   let onMessage = null;
 
   const chrome = {
@@ -151,7 +153,11 @@ function buildEnv() {
     isNaN,
     setTimeout,
     clearTimeout,
-    queueMicrotask
+    queueMicrotask,
+    fetch: (url, opts) => {
+      fetchCalls.push({ url, opts: opts || {} });
+      return fetchImpl ? fetchImpl(url, opts || {}) : Promise.reject(new Error("no fetch stub"));
+    }
   };
   sandbox.globalThis = sandbox;
   sandbox.self = sandbox;
@@ -180,6 +186,10 @@ function buildEnv() {
     io,
     send,
     store,
+    fetchCalls,
+    setFetch(fn) {
+      fetchImpl = fn;
+    },
     get dynamic() {
       return dynamic;
     },
@@ -322,6 +332,84 @@ async function run() {
 
   r = await env.send({ type: "startPicker" });
   eq(r.ok, true, "startPicker without a tab id is a harmless no-op");
+
+  // ------------------------------------------------------ remote list
+  const REMOTE_TEXT = [
+    "! title: Example list",
+    "[Adblock Plus 2.0]",
+    "||ads.example.com^",
+    "||tracker.example.net",
+    "##.cosmetic-only",
+    "/promo\\d+/",
+    "||bad.example/\u65e5\u672c\u8a9e"
+  ].join("\n");
+  const headerMap = { etag: '"v1"', "last-modified": "Wed, 01 Jan 2020 00:00:00 GMT" };
+  env.setFetch(async (url) => ({
+    ok: true,
+    status: 200,
+    headers: { get: (h) => headerMap[String(h).toLowerCase()] || null },
+    text: async () => REMOTE_TEXT
+  }));
+
+  r = await env.send({ type: "setRemoteList", enabled: true, url: "http://insecure.example/list.txt" });
+  eq(r.ok, false, "non-https remote list url is rejected");
+  eq(r.error, "invalid_url", "reject reports invalid_url");
+  eq(ids(env.dynamic, 20000, 29999).length, 0, "no remote rules are added for a rejected url");
+
+  const fetchesBefore = env.fetchCalls.length;
+  r = await env.send({ type: "setRemoteList", enabled: true, url: "https://lists.example/list.txt" });
+  eq(r.ok, true, "setRemoteList accepts an https url");
+  eq(r.settings.remoteListEnabled, true, "remote list enabled flag persists");
+  eq(r.remote.status, "updated", "first sync reports updated");
+  eq(env.fetchCalls.length, fetchesBefore + 1, "sync performs exactly one fetch");
+  eq(env.fetchCalls[env.fetchCalls.length - 1].opts.credentials, "omit", "fetch is cookie-less (no tracking)");
+  const remote = env.dynamic.filter((x) => x.id >= 20000 && x.id <= 29999);
+  eq(remote.length, 3, "only the network-safe subset is compiled (cosmetic/non-ascii skipped)");
+  ok(remote.some((x) => x.condition.requestDomains && x.condition.requestDomains[0] === "ads.example.com"), "||ads.example.com^ -> requestDomains");
+  ok(remote.some((x) => x.condition.requestDomains && x.condition.requestDomains[0] === "tracker.example.net"), "||tracker.example.net -> requestDomains");
+  ok(remote.some((x) => x.condition.regexFilter === "promo\\d+"), "regex line -> regexFilter");
+  for (const x of remote) {
+    ok(x.condition.domainType === "thirdParty", "remote rule " + x.id + " is thirdParty scoped");
+    ok((x.condition.resourceTypes || []).indexOf("main_frame") === -1, "remote rule " + x.id + " never blocks main_frame");
+  }
+
+  r = await env.send({ type: "getRemoteListStatus" });
+  eq(r.remote.enabled, true, "status reports enabled");
+  eq(r.remote.count, 3, "status reports the cached rule count");
+  ok(!!r.remote.hash, "status reports a content hash");
+
+  // A conditional re-sync sends the stored validators and reuses the cache.
+  env.setFetch(async (url, opts) => {
+    if (opts.headers && opts.headers["If-None-Match"] === '"v1"') {
+      return { ok: false, status: 304, headers: { get: () => null }, text: async () => "" };
+    }
+    return { ok: true, status: 200, headers: { get: () => null }, text: async () => REMOTE_TEXT };
+  });
+  r = await env.send({ type: "syncRemoteList" });
+  eq(r.ok, true, "syncRemoteList responds ok");
+  eq(r.remote.status, "not-modified", "304 reuses the cached list");
+  eq(ids(env.dynamic, 20000, 29999).length, 3, "cache reuse keeps the same remote rules");
+
+  // Disabling removes the remote rules but keeps the cache.
+  r = await env.send({ type: "setRemoteList", enabled: false, url: "https://lists.example/list.txt" });
+  eq(r.ok, true, "setRemoteList disable responds ok");
+  eq(r.settings.remoteListEnabled, false, "disable persists");
+  eq(ids(env.dynamic, 20000, 29999).length, 0, "disabling clears remote dynamic rules");
+
+  r = await env.send({ type: "syncRemoteList" });
+  eq(r.ok, false, "syncRemoteList on a disabled list is refused");
+  eq(r.error, "not_enabled", "refusal reports not_enabled");
+
+  // Re-enabling uses the cache without a network round-trip on next startup.
+  r = await env.send({ type: "setRemoteList", enabled: true, url: "https://lists.example/list.txt" });
+  eq(r.settings.remoteListEnabled, true, "re-enable persists");
+  eq(ids(env.dynamic, 20000, 29999).length, 3, "re-enable restores the cached remote rules");
+
+  // Master off clears remote rules too.
+  r = await env.send({ type: "toggle", enabled: false });
+  eq(ids(env.dynamic, 20000, 29999).length, 0, "master disable clears remote rules");
+  r = await env.send({ type: "toggle", enabled: true });
+  eq(ids(env.dynamic, 20000, 29999).length, 3, "master enable restores remote rules from cache");
 
   r = await env.send({ type: "nonsense" });
   eq(r.ok, false, "unknown message is rejected");

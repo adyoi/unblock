@@ -20,33 +20,34 @@
           <input type="checkbox" id="toggle">
           <span class="slider"></span>
         </label>
-        <span>Enable blocking</span>
+        <span data-i18n="enableBlocking">Enable blocking</span>
       </div>
       <div class="grid">
-        <button id="blockThis">Whitelist site</button>
-        <button id="picker" class="primary">Pick element</button>
-        <button id="reload">Reload tab</button>
-        <button id="options">Options</button>
+        <button id="blockThis" data-i18n="whitelistSite">Whitelist site</button>
+        <button id="picker" class="primary" data-i18n="pickElement">Pick element</button>
+        <button id="reload" data-i18n="reloadTab">Reload tab</button>
+        <button id="options" data-i18n="optionsButton">Options</button>
       </div>
       <div class="toggles">
-        <label><input type="checkbox" id="advanced"> Advanced defenses</label>
-        <label><input type="checkbox" id="heuristics"> Heuristics</label>
-        <label><input type="checkbox" id="scriptletsAllow"> Disable scriptlets for this site</label>
+        <label><input type="checkbox" id="advanced"> <span data-i18n="advancedDefenses">Advanced defenses</span></label>
+        <label><input type="checkbox" id="heuristics"> <span data-i18n="heuristics">Heuristics</span></label>
+        <label><input type="checkbox" id="scriptletsAllow"> <span data-i18n="disableScriptlets">Disable scriptlets for this site</span></label>
       </div>
       <div class="list">
         <div class="list-head">
-          <span>Whitelisted sites</span>
-          <button id="clearWl" class="link" hidden>Clear all</button>
+          <span data-i18n="whitelistedSites">Whitelisted sites</span>
+          <button id="clearWl" class="link" hidden data-i18n="clearAll">Clear all</button>
         </div>
-        <p id="wlEmpty" class="hint small" hidden>Empty</p>
+        <p id="wlEmpty" class="hint small" hidden data-i18n="empty">Empty</p>
         <div id="whitelist"></div>
       </div>
-      <div class="hint small">MV3 • DNR + Cosmetic + Scriptlets</div>
+      <div class="hint small" data-i18n="footerTagline">MV3 • DNR + Cosmetic + Scriptlets</div>
     </main>
     <footer>
         <small>Unblock v1.0.0</small>
     </footer>
   </div>
+  <script src="../js/i18n.js"></script>
   <script src="../js/popup.js" type="module"></script>
 </body>
 

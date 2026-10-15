@@ -9,6 +9,8 @@ const defaultSettings = {
   advancedDefenses: true,
   scriptletsAllowlist: [],
   heuristicsEnabled: true,
+  remoteListEnabled: false,
+  remoteListUrl: "",
   version: 1
 };
 
@@ -26,6 +28,11 @@ const CUSTOM_REGEX_MAX = 200;
 const CUSTOM_ID_END = 12999;
 const CUSTOM_RULE_LIMIT = 5000;
 const WHITELIST_PRIORITY = 99;
+const REMOTE_CACHE_KEY = "unblock_remote_list";
+const REMOTE_ID_BASE = 20000;
+const REMOTE_ID_END = 29999;
+const REMOTE_MAX = 1500;
+const REMOTE_MAX_BYTES = 8 * 1024 * 1024;
 const FRAME_TYPES = ["main_frame", "sub_frame"];
 const WHITELIST_SUBRESOURCE_TYPES = [
   "main_frame", "sub_frame", "stylesheet", "script", "image", "font",
@@ -235,6 +242,165 @@ function buildCustomRules(list) {
   return out;
 }
 
+function sanitizeRemoteUrl(raw) {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s || s.length > 2048) return null;
+  if (!/^https:\/\//i.test(s)) return null;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:") return null;
+    if (!u.hostname) return null;
+    return u.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+function fnv1a(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return ("00000000" + h.toString(16)).slice(-8);
+}
+
+// Compile the MV3-safe subset of a remote filter list. Cosmetic rules,
+// exceptions, options ($...) and non-ASCII patterns are skipped entirely.
+function buildRemoteRules(text) {
+  const out = [];
+  if (typeof text !== "string" || !text) return out;
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length && out.length < REMOTE_MAX; i++) {
+    const s = lines[i].trim();
+    if (!s || s.length > 4096) continue;
+    if (s.charAt(0) === "!" || s.charAt(0) === "@" || s.charAt(0) === "[") continue;
+    if (s.indexOf("##") !== -1 || s.indexOf("#@#") !== -1 || s.indexOf("#?#") !== -1) continue;
+    if (s.indexOf("$") !== -1) continue;
+    if (/[^\x20-\x7e]/.test(s)) continue;
+    const base = { domainType: "thirdParty", resourceTypes: CUSTOM_RESOURCE_TYPES };
+    if (s.length > 2 && s.charAt(0) === "/" && s.charAt(s.length - 1) === "/") {
+      const inner = s.slice(1, -1);
+      if (!inner || inner.length > 1000) continue;
+      try {
+        new RegExp(inner);
+      } catch (e) {
+        continue;
+      }
+      out.push({ id: REMOTE_ID_BASE + out.length, priority: 1, action: { type: "block" }, condition: Object.assign({ regexFilter: inner }, base) });
+      continue;
+    }
+    const bare = /^\|\|([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)\^?\/?$/i.exec(s);
+    const wild = /^\|\|\*\.([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)\^?\/?$/i.exec(s);
+    const hostPart = bare ? bare[1] : wild ? wild[1] : null;
+    if (hostPart) {
+      const domain = sanitizeDomain(hostPart);
+      if (!domain) continue;
+      out.push({ id: REMOTE_ID_BASE + out.length, priority: 1, action: { type: "block" }, condition: Object.assign({ requestDomains: [domain] }, base) });
+      continue;
+    }
+    if (s.indexOf("||*") === 0) continue;
+    if (/^[|*^]+$/.test(s)) continue;
+    out.push({ id: REMOTE_ID_BASE + out.length, priority: 1, action: { type: "block" }, condition: Object.assign({ urlFilter: s }, base) });
+  }
+  return out;
+}
+
+async function readRemoteCache() {
+  try {
+    const data = await chrome.storage.local.get(REMOTE_CACHE_KEY);
+    const c = data && data[REMOTE_CACHE_KEY];
+    if (c && typeof c === "object") return c;
+  } catch (e) {}
+  return null;
+}
+
+async function writeRemoteCache(cache) {
+  try {
+    await chrome.storage.local.set({ [REMOTE_CACHE_KEY]: cache });
+  } catch (e) {}
+}
+
+async function applyRemoteDnr(settings) {
+  let wanted = [];
+  const enabled = settings.enabled !== false && settings.remoteListEnabled === true;
+  const url = sanitizeRemoteUrl(settings.remoteListUrl || "");
+  if (enabled && url) {
+    const cache = await readRemoteCache();
+    if (cache && cache.url === url && typeof cache.text === "string") {
+      wanted = buildRemoteRules(cache.text);
+    }
+  }
+  await applyDynamicRules(wanted, (id) => id >= REMOTE_ID_BASE && id <= REMOTE_ID_END, "remote");
+}
+
+// Opt-in only. Fetches the user-supplied HTTPS list with no credentials and no
+// referrer, keeps an ETag/Last-Modified cache locally, and never contacts any
+// third party.
+async function syncRemoteList(settings) {
+  const s = settings || (await getSettings());
+  const url = sanitizeRemoteUrl(s.remoteListUrl || "");
+  if (!url) {
+    await applyRemoteDnr(s);
+    return { ok: false, error: "invalid_url" };
+  }
+  if (s.enabled === false || s.remoteListEnabled !== true) {
+    await applyRemoteDnr(s);
+    const cache = await readRemoteCache();
+    const fresh = cache && cache.url === url;
+    return { ok: true, status: "disabled", count: fresh ? cache.count || 0 : 0, url };
+  }
+  const prev = await readRemoteCache();
+  const headers = {};
+  if (prev && prev.url === url) {
+    if (prev.etag) headers["If-None-Match"] = prev.etag;
+    if (prev.lastModified) headers["If-Modified-Since"] = prev.lastModified;
+  }
+  let res;
+  try {
+    res = await fetch(url, { cache: "no-store", credentials: "omit", redirect: "follow", headers });
+  } catch (e) {
+    await applyRemoteDnr(s);
+    return { ok: false, error: "network" };
+  }
+  if (res.status === 304 && prev && prev.url === url && typeof prev.text === "string") {
+    const cache = Object.assign({}, prev, { fetchedAt: Date.now() });
+    await writeRemoteCache(cache);
+    await applyRemoteDnr(s);
+    return { ok: true, status: "not-modified", count: buildRemoteRules(cache.text).length, url };
+  }
+  if (!res.ok) {
+    await applyRemoteDnr(s);
+    return { ok: false, error: "http_" + res.status };
+  }
+  let text;
+  try {
+    text = await res.text();
+  } catch (e) {
+    await applyRemoteDnr(s);
+    return { ok: false, error: "read_failed" };
+  }
+  if (typeof text !== "string" || text.length > REMOTE_MAX_BYTES) {
+    await applyRemoteDnr(s);
+    return { ok: false, error: "too_large" };
+  }
+  const rules = buildRemoteRules(text);
+  const header = (name) => (res.headers && res.headers.get ? res.headers.get(name) || "" : "");
+  const cache = {
+    url,
+    etag: header("etag"),
+    lastModified: header("last-modified"),
+    fetchedAt: Date.now(),
+    hash: fnv1a(text),
+    count: rules.length,
+    text
+  };
+  await writeRemoteCache(cache);
+  await applyRemoteDnr(s);
+  return { ok: true, status: "updated", count: rules.length, url };
+}
+
 async function applyDynamicRules(wanted, inRange, label) {
   let current = [];
   try {
@@ -399,6 +565,7 @@ async function syncAll(settings) {
     applyEnabledState(s),
     applyWhitelistDnr(s),
     applyCustomDnr(s),
+    applyRemoteDnr(s),
     syncGuard(s)
   ]);
 }
@@ -620,6 +787,53 @@ async function handleMessage(msg, sender, sendResponse) {
       } catch (e) {}
     }
     sendResponse({ ok: true, active });
+    return;
+  }
+  if (msg.type === "getRemoteListStatus") {
+    const url = sanitizeRemoteUrl(settings.remoteListUrl || "");
+    const cache = await readRemoteCache();
+    const fresh = !!(cache && cache.url === url);
+    sendResponse({
+      ok: true,
+      settings,
+      remote: {
+        enabled: settings.remoteListEnabled === true,
+        url: url || "",
+        count: fresh ? cache.count || 0 : 0,
+        fetchedAt: fresh ? cache.fetchedAt || 0 : 0,
+        hash: fresh ? cache.hash || "" : ""
+      }
+    });
+    return;
+  }
+  if (msg.type === "setRemoteList") {
+    const enabled = msg.enabled === true;
+    const url = msg.url ? sanitizeRemoteUrl(msg.url) : "";
+    if (enabled && !url) {
+      sendResponse({ ok: false, error: "invalid_url", settings });
+      return;
+    }
+    settings.remoteListEnabled = enabled;
+    settings.remoteListUrl = url || "";
+    await saveSettings(settings);
+    let remote;
+    if (enabled) {
+      remote = await syncRemoteList(settings);
+    } else {
+      await applyRemoteDnr(settings);
+      remote = { ok: true, status: "disabled", count: 0, url: "" };
+    }
+    sendResponse({ ok: true, settings, remote });
+    return;
+  }
+  if (msg.type === "syncRemoteList") {
+    if (settings.remoteListEnabled !== true) {
+      await applyRemoteDnr(settings);
+      sendResponse({ ok: false, error: "not_enabled", settings });
+      return;
+    }
+    const remote = await syncRemoteList(settings);
+    sendResponse({ ok: true, settings, remote });
     return;
   }
   sendResponse({ ok: false, error: "unknown" });

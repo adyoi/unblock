@@ -9,9 +9,10 @@
     "url": "https://github.com/adyoi/unblock.git"
   },
   "scripts": {
-    "test": "npm run test:guard && npm run test:background",
+    "test": "npm run test:guard && npm run test:background && npm run test:scriptlets",
     "test:guard": "node tools/test-main-guard.js",
     "test:background": "node tools/test-background.js",
+    "test:scriptlets": "node tools/test-scriptlets.js",
     "verify": "python tools/verify.py .",
     "pack": "python tools/pack.py",
     "verify:dist": "python tools/verify.py dist/unblock-1.0.0.zip",

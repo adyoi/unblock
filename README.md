@@ -72,10 +72,14 @@ generated preview (`python tools/generate-store-assets.py`).
   - `set-constant` – Locks values to avoid bait/telemetry toggles
   - `json-prune` – Prunes sensitive JSON paths
   - `remove-attr` – Removes tracking attributes dynamically
+  - `remove-class` – Strips a class (and keeps stripping it) from matching elements
+  - `abort-current-script` – Redefines a property so reading it throws, stopping bait scripts
   - `prevent-setTimeout` / `prevent-setInterval` – Throttles known timer-based bait
   - `no-eval-if` – Blocks eval when pattern matches
 - **Procedural Cosmetic Filtering** – MutationObserver-driven heuristic hiding with WeakSet deduplication (catches dynamically injected ad slots).
 - **Auto-Site Mitigations** – Lightweight baseline scriptlets applied at `document_start` (YouTube-focused safe defaults, generic fallback).
+- **Remote Filter Lists (opt-in)** – Fetch a filter list over HTTPS on demand and compile its MV3-safe subset into dynamic rules. Cookie-less reads, ETag/Last-Modified caching, local-only storage, and no third-party tracking.
+- **Internationalization Scaffolding** – UI strings resolve through `chrome.i18n` with `_locales/en` as the base locale.
 
 ## Limitations vs uBlock Origin (Full)
 
@@ -130,15 +134,18 @@ generated preview (`python tools/generate-store-assets.py`).
   - Domain block (DNR): `||ads.example.com`, `||example.com`
   - Path pattern: `/ads/*.js`, `/ads/`, `/banner*.js`
   - Comments: lines starting `#` are ignored on import (fromText filters `#`)
+- **Live Rule Validation**: The editor validates every line as you type (mirroring what the engine accepts) and shows a `valid / warning / error` summary. Invalid CSS selectors, regexes, domains and non-ASCII patterns are flagged; saving with errors asks for confirmation first.
 - **Refresh**: Reload the editor back to the stored rules (discard unsaved text edits).
 - **Whitelist**: Hostnames (exact). Applied at runtime context (UI only; DNR allowlisting not auto-generated here to avoid rule bloat).
+- **Remote Filter Lists**: Opt-in. Paste an HTTPS list URL and click **Sync now**. The service worker fetches it cookie-less, caches it locally (with ETag/Last-Modified validators) and compiles the MV3-safe subset into dynamic rules. Nothing is sent to any third party.
 - **Import/Export**: JSON `{customRules[], whitelist[], exportedAt}` or paste raw rules text. Import accepts both `domain | selector` and adblock `domain##selector` forms.
 
 ### Element Picker Behavior
 - Selector generation: traverses up to depth 6, prefers ID if present, else tag + up to 2 classes (CSS-escaped); marker classes (`unblock-picked`, `unblock-blocked`) are excluded.
 - Border states: **hover** = red solid; **click/lock** = orange solid; **blocked/picked** = red dashed; **unblocked/undo** = orange dashed.
 - While an element is locked, hover is frozen and the cursor returns to normal, so moving the mouse no longer changes the target.
-- Toolbar actions: **Block element**, **Block parent**, **Undo** (removes this session's block, or the existing rule matching the locked element), **Cancel**/**Exit**.
+- Toolbar actions: **Block element**, **Block parent**, **Block similar**, **Undo** (removes this session's block, or the existing rule matching the locked element), **Cancel**/**Exit**.
+- **Block similar** generalizes the locked element to a sibling selector (`tag` + shared classes, kept only when it matches 2–50 elements) so a repeated ad slot is blocked in one click; the whole group is marked and a single Undo reverses it.
 - Blocking writes a domain-scoped rule (`host##selector`) to Custom Rules immediately; **Undo** removes it. Esc/Cancel/Exit keep whatever was applied and clean up the overlay.
 - Pressing **Escape** stops the picker (registered on capture, so pages that swallow keydown cannot block it). The popup button toggles start/stop; `pickerArmed` in the content script is the live source of truth, so the toggle survives service-worker suspension.
 - Applies `data-unblock-hidden` + `display:none !important` via the cosmetic layer; hidden elements are revealed with a red dashed outline while picking and restored on stop.
@@ -146,7 +153,7 @@ generated preview (`python tools/generate-store-assets.py`).
 ### Scriptlets Notes
 - Run at `document_start` (ISOLATED world). Designed defensive-only (no arbitrary remote eval).
 - Auto-applied: YouTube gets extra safe constants + `no-adblocker`; others get `no-adblocker` baseline.
-- Extendable via `window.__uboScriptlets.run([...])` if needed (internal API).
+- Extendable via `window.__uboScriptlets.run([...])` if needed (internal API). `remove-class` and `abort-current-script` take arguments, e.g. `run([{name:'remove-class', args:['ad','.ad']}])`.
 
 ## Project Structure
 
@@ -164,14 +171,17 @@ D:\Project\ublock-origin/
 │   └── index.html          # GitHub Pages documentation
 ├── icons/                  # PNG icons (color + gray, shield & u glyph)
 ├── js/
-│   ├── background.js       # SW: settings, messages, whitelist DNR, icon
+│   ├── background.js       # SW: settings, messages, whitelist/custom/remote DNR, icon
 │   ├── content.js          # Cosmetic selectors + auto scriptlets + picker bridge
 │   ├── cosmetic-advanced.js# Procedural cosmetic + generic heuristics
+│   ├── i18n.js             # i18n helper (chrome.i18n + data-i18n)
 │   ├── main-guard.js       # MAIN-world popup / new-tab guard (self-healing)
-│   ├── options.js          # Options logic (save/import/export)
+│   ├── options.js          # Options logic (save/import/export/validation/remote)
 │   ├── picker.js           # Element picker (injected)
 │   ├── popup.js            # Popup logic + picker trigger
 │   └── scriptlets.js       # Scriptlets registry + runner
+├── _locales/
+│   └── en/messages.json    # Base locale strings (manifest + UI)
 ├── rules/
 │   ├── ads-lite.json       # Ad domains/paths (DNR)
 │   ├── default-block.json  # Baseline block rules
@@ -221,16 +231,24 @@ D:\Project\ublock-origin/
 ### Scriptlets Layer
 - Registry pattern (`SCRIPTLETS` map) + defensive try/catch, minimal surface.
 - ISOLATED world avoids conflicts; no global pollution beyond internal `__uboScriptlets`, `__uboCosmetic`.
-- Bundled scriptlets: `no-adblocker`, `prevent-popads-net`, `prevent-window-open`.
+- Bundled scriptlets: `no-adblocker`, `prevent-popads-net`, `prevent-window-open`, `remove-class`, `abort-current-script`.
 - Auto mitigations conservative (avoid breaking playback unnecessarily).
+
+### Remote Filter Lists (opt-in)
+- Configured from Options (`setRemoteList`, `syncRemoteList`); disabled by default.
+- Only `https://` URLs are accepted; every fetch is cookie-less (`credentials: "omit"`), uses `redirect: "follow"` and never leaks a referrer to a third party.
+- The raw list is cached locally under `unblock_remote_list` (separate from settings, so content scripts never load it). Only the network-safe subset is compiled: `||domain`/`||*.domain` → `requestDomains`, `/regex/` → `regexFilter`, plain patterns → `urlFilter`. Cosmetic rules, exceptions and `$` options are skipped.
+- Remote rules occupy a dedicated id range (`20000–29999`, capped at 1500) and are recomputed from cache on startup, so protection survives offline.
+- Conditional re-syncs send `If-None-Match`/`If-Modified-Since` and handle `304` without re-downloading.
 
 ### Storage
 - `chrome.storage.local` key `unblock_settings`.
-- Settings: `{enabled, whitelist[], customRules[], cosmeticSelectors[], scriptletsAllowlist[], advancedDefenses, heuristicsEnabled}`.
+- Settings: `{enabled, whitelist[], customRules[], cosmeticSelectors[], scriptletsAllowlist[], advancedDefenses, heuristicsEnabled, remoteListEnabled, remoteListUrl}`.
+- Remote list cache lives under a separate key (`unblock_remote_list`) so content scripts never load the list text.
 - Whitelist entries survive restarts and disable all filtering for that domain until removed. The popup shows a "Paused on this site" state, highlights the current entry, and offers both a per-domain toggle and "Clear all".
 
 ### Messaging
-- Runtime messages: `getSettings,toggle,addWhitelist,removeWhitelist,clearWhitelist,saveCustomRules,addCustomRule,removeCustomRule,setAdvancedDefenses,setHeuristics,toggleScriptletsAllowlist,startPicker,pickerStop,pickerState,pickerStateQuery,pickerEnded`.
+- Runtime messages: `getSettings,toggle,addWhitelist,removeWhitelist,clearWhitelist,saveCustomRules,addCustomRule,removeCustomRule,setAdvancedDefenses,setHeuristics,toggleScriptletsAllowlist,startPicker,pickerStop,pickerState,pickerStateQuery,pickerEnded,setRemoteList,syncRemoteList,getRemoteListStatus`.
 - Window postMessage bridge for the picker (`UNBLOCK_PICKED`, `UNBLOCK_UNPICK`, `UNBLOCK_RULESET`, `UNBLOCK_PICKER_STOP`, `UNBLOCK_PICKER_END`; same-origin page only).
 
 ## Security & Privacy
@@ -238,7 +256,7 @@ D:\Project\ublock-origin/
 - **No remote code**: All JS/CSS/JSON local. No CDN execution, no telemetry.
 - **Least Privilege**: Permissions scoped (DNR, storage, tabs/activeTab/scripting, userScripts). `host_permissions: <all_urls>` required for DNR + content scripts.
 - **Defensive Coding**: try/catch, null checks, selector guards, CSS.escape, depth limits.
-- **No Data Exfiltration**: No network calls, no analytics, no external requests.
+- **No Data Exfiltration**: No analytics, no telemetry, no background requests. The only outbound request is the opt-in remote filter list fetch, which is cookie-less and goes only to the user-supplied list host.
 - **Import Safety**: JSON/text import validated (try/catch), non-rule lines trimmed/filtered.
 - **XSS Hygiene**: Popup/options use textContent/DOM creation, not innerHTML for untrusted dynamic strings (whitelist items use escaped text).
 
@@ -253,19 +271,20 @@ D:\Project\ublock-origin/
 
 ### Automated Checks
 ```bash
-npm test                               # offline unit harnesses (guard + background)
+npm test                               # offline unit harnesses (guard + background + scriptlets)
 node tools/test-main-guard.js          # popup/new-tab guard regression (61 assertions)
-node tools/test-background.js          # service-worker/settings regression (92 assertions)
+node tools/test-background.js          # service-worker/settings/DNR regression (134 assertions)
+node tools/test-scriptlets.js          # scriptlets registry regression (14 assertions)
 python tools/verify.py .               # validate the source tree
 python tools/pack.py                   # build dist/unblock-<version>.zip
 python tools/verify.py dist/unblock-1.0.0.zip
 ```
 
-The guard and background harnesses are pure Node (no browser), so they run anywhere.
+The guard, background and scriptlets harnesses are pure Node (no browser), so they run anywhere.
 The Chrome-driven E2E probes (`tools/dnr-test.js`, `tools/e2e-guard.js`,
 `tools/e2e-probe.js`) need a local Chrome install and are run manually.
 
-`verify.py` enforces Manifest V3 shape, that every manifest-referenced file exists, that all rules parse, are uniquely id'd, `thirdParty`-scoped and free of risky resource types, that every shipped `.js` passes `node --check` and contains no `eval`/remote import/legacy branding, and that icons are square PNGs at their declared sizes.
+`verify.py` enforces Manifest V3 shape, that every manifest-referenced file exists, that all rules parse, are uniquely id'd, `thirdParty`-scoped and free of risky resource types, that any `default_locale` resolves its `_locales/` bundle and every `__MSG_key__` used by the manifest exists, that every shipped `.js` passes `node --check` and contains no `eval`/remote import/legacy branding, and that icons are square PNGs at their declared sizes.
 
 ### Manual Smoke Tests
 - [ ] Load unpacked, no manifest errors (`chrome://extensions` → Errors: none)
@@ -275,7 +294,10 @@ The Chrome-driven E2E probes (`tools/dnr-test.js`, `tools/e2e-guard.js`,
 - [ ] **Play a video, then advance to the next video** — playback keeps working and popups stay blocked
 - [ ] BFCache: navigate away and back → guard still sealed
 - [ ] Element Picker: Pick element toggles on ("Stop picking"); hover = red solid, click = orange solid, Block = red dashed, Undo = orange dashed; Esc/stop keeps the applied rule and the element stays hidden after reload/apply
+- [ ] Element Picker: **Block similar** hides the sibling cluster in one click and Undo restores all of them
 - [ ] Element Picker: Undo on an existing blocked element removes its Custom Rule and the element reappears after stopping
+- [ ] Options: paste an invalid selector/regex → the validator flags it (error) and Save asks for confirmation
+- [ ] Options: enable remote list with a valid HTTPS list → status shows the rule count; disable → rules are cleared
 - [ ] YouTube: playback stable, fewer ad slots (scriptlets baseline)
 - [ ] Dynamic sites (infinite scroll): pagination and "read more" links are still visible and clickable
 - [ ] Import/Export JSON + raw text
@@ -308,6 +330,13 @@ python -m json.tool rules/*.json
 | DNR limit warnings | Too many custom/static rules | Trim unused Custom Rules, avoid extremely broad `||` without resourceTypes, split lists. |
 
 ## Audit Summary (What Was Cleaned/Fix/Optimized)
+
+### Added
+- **Options rule validation** (`js/options.js`, `css/options.css`): live `valid/warning/error` summary mirroring the engine's accepted subset; saving with errors asks for confirmation.
+- **Picker "Block similar"** (`js/picker.js`): sibling/selector generalization with grouped marking and single-entry Undo.
+- **Scriptlets** (`js/scriptlets.js`): added `abort-current-script` and `remove-class` safe subsets, covered by `tools/test-scriptlets.js`.
+- **i18n** (`js/i18n.js`, `_locales/en/messages.json`, `manifest.json`): `default_locale` + `__MSG_*__` manifest strings and a `data-i18n` helper for popup/options.
+- **Remote filter lists** (`js/background.js`, `js/options.js`): opt-in, cookie-less HTTPS fetch, ETag/Last-Modified cache, dedicated dynamic-rule range with a hard cap.
 
 ### Cleaned Up
 - Renamed branding to **Unblock** (name/short_name/author/description, UI, README, docs)
@@ -342,25 +371,29 @@ python -m json.tool rules/*.json
 
 | Priority | Suggestion | Rationale |
 |---|---|---|
-| High | **Filter list updater (remote)** | Fetch EasyList/AdGuard/uBlock lists (auto-update) with checksum + ETags. Store in `rules/`-like dynamic sets (respect MV3 quotas). |
 | High | **Rule syntax parser** | Parse `$domain`, `$third-party`, `$script`, `$image`, `$important` subset → map to DNR where feasible, warn unsupported. |
-| Med | **CSP/scriptlet allowlist** | Site-specific toggle to disable auto-scriptlets (YouTube-safe defaults but edge cases). |
-| Med | **Element picker advanced** | "Block parent", "Block similar", "Undo last" (history). Avoids depth overfitting. |
 | Med | **Telemetry-free stats** | Local counters (blocked requests count, elements hidden) in popup (storage read-light). |
-| Med | **i18n** | Extract UI strings to `_locales/` (EN base). |
 | Low | **Offscreen?** | Avoid unless heavy processing (not needed). Current design service-worker light. |
 | Low | **Test coverage** | Playwright/Puppeteer smoke for critical flows (optional). |
 | Low | **Firefox MV3 parity** | Note `userScripts` support varies; add fallback if cross-browser desired. |
+
+### Recently Implemented (was on the suggestions table)
+
+- **Remote filter list updater** – opt-in HTTPS fetch with checksum + ETag/Last-Modified caching, compiled into a dedicated dynamic-rule range (respects MV3 quotas).
+- **Element picker "block similar"** – sibling/selector generalization with single-entry undo.
+- **CSP/scriptlet allowlist** – per-site toggle to disable auto-scriptlets.
+- **i18n** – UI strings extracted to `_locales/en` (EN base) with a `data-i18n` helper.
+- **Options rule validation UI** – live highlighting of invalid selectors/filters.
 
 ## Roadmap
 
 - [x] DNR exception rules for whitelist (cleaner semantics)
 - [x] Advanced picker: block parent + undo (session history)
-- [ ] Remote filter list sync (opt-in, local cache, no third-party tracking)
-- [ ] Advanced picker: "block similar" (sibling/selector generalization)
-- [ ] Scriptlets: expand safe set (`abort-current-script`, `remove-class` subset) with allowlist
-- [ ] `_locales/en` + base i18n scaffolding
-- [ ] Options: rule validation UI (highlight invalid selectors/filters)
+- [x] Remote filter list sync (opt-in, local cache, no third-party tracking)
+- [x] Advanced picker: "block similar" (sibling/selector generalization)
+- [x] Scriptlets: expand safe set (`abort-current-script`, `remove-class` subset) with allowlist
+- [x] `_locales/en` + base i18n scaffolding
+- [x] Options: rule validation UI (highlight invalid selectors/filters)
 
 ## Contributing
 

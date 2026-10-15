@@ -88,6 +88,22 @@ def main(src):
     r.check(bool(mf.get("name")), "manifest has no name")
     r.check(bool(mf.get("description")), "manifest has no description")
 
+    # ------------------------------------------------------------- i18n
+    locale = mf.get("default_locale")
+    if locale:
+        lpath = f"_locales/{locale}/messages.json"
+        if lpath not in {rel for _, rel in names(src)}:
+            r.check(False, f"default_locale '{locale}' has no {lpath}")
+        else:
+            try:
+                messages = json.loads(read(src, lpath))
+            except Exception as e:
+                messages = {}
+                r.check(False, f"invalid messages JSON {lpath}: {e}")
+            # Every __MSG_key__ referenced anywhere in the manifest must exist.
+            for key in set(re.findall(r"__MSG_([A-Za-z0-9_@]+)__", raw.decode("utf-8", "replace"))):
+                r.check(key in messages, f"manifest references missing message '{key}'")
+
     # names() yields (absolute, relative); we need relative -> absolute.
     files = {rel: abspath for abspath, rel in names(src)}
     shipped = [rel for rel in files if not rel.startswith("dist/")]

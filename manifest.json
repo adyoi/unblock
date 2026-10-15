@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Unblock",
-  "short_name": "Unblock",
+  "name": "__MSG_extensionName__",
+  "short_name": "__MSG_extensionShortName__",
   "version": "1.0.0",
-  "description": "Lightweight, privacy-first content blocker. MV3-optimized with element picker, advanced cosmetic filtering, and anti-adblock mitigations.",
+  "default_locale": "en",
+  "description": "__MSG_extensionDescription__",
   "author": "Unblock Project",
   "permissions": [
     "declarativeNetRequest",

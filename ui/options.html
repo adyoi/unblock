@@ -11,18 +11,18 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Unblock – Options</h1>
+      <h1 data-i18n="optionsTitle">Unblock – Options</h1>
       <div class="actions">
-        <button id="save">Save</button>
-        <button id="refresh">Refresh</button>
-        <button id="export">Export</button>
+        <button id="save" data-i18n="saveButton">Save</button>
+        <button id="refresh" data-i18n="refreshButton">Refresh</button>
+        <button id="export" data-i18n="exportButton">Export</button>
         <input type="file" id="import" accept=".json,.txt" hidden>
-        <button id="importBtn">Import</button>
+        <button id="importBtn" data-i18n="importButton">Import</button>
       </div>
     </header>
     <main>
       <section>
-        <h2>Custom Rules</h2>
+        <h2 data-i18n="customRules">Custom Rules</h2>
         <p class="hint">One per line. Examples: <code>##.ad-banner</code>,
           <code>example.com | .ad-banner</code>, <code>||ads.example.com</code>,
           <code>/ads/*.js</code>. Prefix a selector with a domain to scope it.
@@ -31,14 +31,28 @@
 example.com | #main.wrap > section.hero > h1
 ||tracker.example.com
 /example-ad.js"></textarea>
+        <div id="ruleStatus" class="status-list" role="status" aria-live="polite"></div>
       </section>
       <section>
-        <h2>Whitelisted Domains</h2>
+        <h2 data-i18n="whitelistedDomains">Whitelisted Domains</h2>
         <textarea id="whitelist" spellcheck="false" placeholder="example.com
 sub.example.com"></textarea>
       </section>
       <section>
-        <h2>Advanced Features</h2>
+        <h2 data-i18n="remoteLists">Remote Filter Lists</h2>
+        <p class="hint">Opt-in. Fetches a filter list over HTTPS and compiles its MV3-safe subset into dynamic rules.
+          The list is cached locally; requests are cookie-less and go only to the list host.</p>
+        <div class="row-inline">
+          <label><input type="checkbox" id="remoteEnabled"> <span data-i18n="remoteEnable">Enable remote list</span></label>
+        </div>
+        <div class="row-inline">
+          <input type="url" id="remoteUrl" placeholder="https://example.com/filters.txt" spellcheck="false">
+          <button id="remoteSync" data-i18n="remoteSync">Sync now</button>
+        </div>
+        <div id="remoteStatus" class="status-text"></div>
+      </section>
+      <section>
+        <h2 data-i18n="advancedFeatures">Advanced Features</h2>
         <ul class="hint">
           <li><b>Scriptlets</b>: Lightweight anti-adblock mitigations.</li>
           <li><b>Element Picker</b>: Click elements to block visually.</li>
@@ -47,7 +61,7 @@ sub.example.com"></textarea>
         </ul>
       </section>
       <section>
-        <h2>Notes</h2>
+        <h2 data-i18n="notes">Notes</h2>
         <ul class="hint">
           <li>MV3 uses static declarativeNetRequest rules. Dynamic filtering is not fully portable to Chromium MV3.</li>
           <li>Scriptlets run at <code>document_start</code> for earlier coverage.</li>
@@ -55,6 +69,7 @@ sub.example.com"></textarea>
       </section>
     </main>
   </div>
+  <script src="../js/i18n.js"></script>
   <script src="../js/options.js" type="module"></script>
 </body>
 

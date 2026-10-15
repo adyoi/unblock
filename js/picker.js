@@ -10,12 +10,14 @@
   const label = document.createElement('span'); label.textContent = 'Element picker';
   const btnElement = document.createElement('button'); btnElement.id = 'block-element'; btnElement.textContent = 'Block element';
   const btnParent = document.createElement('button'); btnParent.id = 'block-parent'; btnParent.textContent = 'Block parent';
+  const btnSimilar = document.createElement('button'); btnSimilar.id = 'block-similar'; btnSimilar.textContent = 'Block similar';
   const btnUndo = document.createElement('button'); btnUndo.id = 'block-undo'; btnUndo.textContent = 'Undo';
   const btnCancel = document.createElement('button'); btnCancel.id = 'block-cancel'; btnCancel.className = 'close'; btnCancel.textContent = 'Cancel';
   const btnExit = document.createElement('button'); btnExit.id = 'block-exit'; btnExit.className = 'danger'; btnExit.textContent = 'Exit';
   toolbar.appendChild(label);
   toolbar.appendChild(btnElement);
   toolbar.appendChild(btnParent);
+  toolbar.appendChild(btnSimilar);
   toolbar.appendChild(btnUndo);
   toolbar.appendChild(btnCancel);
   toolbar.appendChild(btnExit);
@@ -74,6 +76,20 @@
     }
     if (parts.length === 0) return null; return unique(parts.join(' > '));
   }
+  function escClass(c) { try { return CSS.escape(c); } catch (e) { return c; } }
+  function similarSelector(el) {
+    if (!(el instanceof Element) || !el.parentElement) return null;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'html' || tag === 'body') return null;
+    const classes = el.classList ? Array.from(el.classList).filter((c) => c.indexOf('unblock-') !== 0) : [];
+    for (let n = classes.length; n >= 0; n--) {
+      const sel = tag + classes.slice(0, n).map((c) => '.' + escClass(c)).join('');
+      let total = 0;
+      try { total = document.querySelectorAll(sel).length; } catch (e) { continue; }
+      if (total >= 2 && total <= 50) return sel;
+    }
+    return null;
+  }
   function placeToolbar(el) {
     if (!el) return;
     ensureMounted();
@@ -113,7 +129,8 @@
     applyCursor();
     placeToolbar(locked);
   }
-  function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} history.push({ el: el, sel: sel }); try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} }
+  function applySimilar(sel, els) { if (!sel || !els || !els.length) return; for (let i = 0; i < els.length; i++) { try { els[i].classList.add('unblock-picked'); } catch (e) {} } history.push({ els: els.slice(), sel: sel }); try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} }
+  function applyRule(sel, el) { if (!sel || !el) return; applySimilar(sel, [el]); }
   function releaseLock() { if (locked) { try { locked.classList.remove('unblock-locked'); } catch (e) {} } locked = null; try { box.style.display = ''; } catch (e) {} applyCursor(); }
   function markUnblocked(el) {
     if (!el) return;
@@ -136,11 +153,23 @@
     applyCursor();
     placeToolbar(p);
   }
+  function blockSimilar(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const el = locked || target; if (!el) return;
+    const sel = similarSelector(el) || getSelector(el);
+    if (sel) {
+      let els = [];
+      try { els = Array.prototype.slice.call(document.querySelectorAll(sel)); } catch (err) { els = [el]; }
+      if (!els.length) els = [el];
+      applySimilar(sel, els);
+    }
+    releaseLock(); toolbar.style.display = 'none';
+  }
   function undo(e) {
     if (e && e.stopPropagation) e.stopPropagation();
     const u = history.pop();
-    if (u && u.el) {
-      markUnblocked(u.el);
+    if (u && u.els && u.els.length) {
+      for (let i = 0; i < u.els.length; i++) markUnblocked(u.els[i]);
       try { window.postMessage({ type: 'UNBLOCK_UNPICK', selector: u.sel }, '*'); } catch (err) {}
       releaseLock(); toolbar.style.display = 'none';
       return;
@@ -159,7 +188,10 @@
   }
   function cleanup() {
     try { window.removeEventListener('mousemove', highlight, true); window.removeEventListener('click', lock, true); } catch (e) {}
-    for (let i = 0; i < history.length; i++) { try { history[i].el.classList.remove('unblock-picked'); } catch (e) {} }
+    for (let i = 0; i < history.length; i++) {
+      const els = history[i].els || [];
+      for (let j = 0; j < els.length; j++) { try { els[j].classList.remove('unblock-picked'); } catch (e) {} }
+    }
     for (let i = 0; i < marked.length; i++) { try { marked[i].classList.remove('unblock-unblocked'); } catch (e) {} }
     releaseLock();
     try { overlay.remove(); box.remove(); toolbar.remove(); } catch (e) {}
@@ -180,6 +212,7 @@
   window.addEventListener('click', lock, true);
   btnElement.onclick = (e) => { e.stopPropagation(); blockElement(e); };
   btnParent.onclick = (e) => { e.stopPropagation(); blockParent(e); };
+  btnSimilar.onclick = (e) => { e.stopPropagation(); blockSimilar(e); };
   btnUndo.onclick = (e) => { e.stopPropagation(); undo(e); };
   btnCancel.onclick = (e) => { e.stopPropagation(); cleanup(); };
   btnExit.onclick = (e) => { e.stopPropagation(); cleanup(); };

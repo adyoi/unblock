@@ -1,0 +1,112 @@
+{
+  "extensionName": {
+    "message": "Unblock"
+  },
+  "extensionShortName": {
+    "message": "Unblock"
+  },
+  "extensionDescription": {
+    "message": "Lightweight, privacy-first content blocker. MV3-optimized with element picker, advanced cosmetic filtering, and anti-adblock mitigations."
+  },
+  "enableBlocking": {
+    "message": "Enable blocking"
+  },
+  "whitelistSite": {
+    "message": "Whitelist site"
+  },
+  "unblockSite": {
+    "message": "Unblock this site"
+  },
+  "unavailable": {
+    "message": "Unavailable"
+  },
+  "pickElement": {
+    "message": "Pick element"
+  },
+  "stopPicking": {
+    "message": "Stop picking"
+  },
+  "reloadTab": {
+    "message": "Reload tab"
+  },
+  "optionsButton": {
+    "message": "Options"
+  },
+  "advancedDefenses": {
+    "message": "Advanced defenses"
+  },
+  "heuristics": {
+    "message": "Heuristics"
+  },
+  "disableScriptlets": {
+    "message": "Disable scriptlets for this site"
+  },
+  "whitelistedSites": {
+    "message": "Whitelisted sites"
+  },
+  "clearAll": {
+    "message": "Clear all"
+  },
+  "clearAllCount": {
+    "message": "Clear all ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "empty": {
+    "message": "Empty"
+  },
+  "remove": {
+    "message": "Remove"
+  },
+  "pausedOnSite": {
+    "message": "Paused on this site"
+  },
+  "blockingOn": {
+    "message": "Blocking ON"
+  },
+  "blockingOff": {
+    "message": "Blocking OFF"
+  },
+  "footerTagline": {
+    "message": "MV3 \u2022 DNR + Cosmetic + Scriptlets"
+  },
+  "optionsTitle": {
+    "message": "Unblock \u2013 Options"
+  },
+  "saveButton": {
+    "message": "Save"
+  },
+  "refreshButton": {
+    "message": "Refresh"
+  },
+  "exportButton": {
+    "message": "Export"
+  },
+  "importButton": {
+    "message": "Import"
+  },
+  "customRules": {
+    "message": "Custom Rules"
+  },
+  "whitelistedDomains": {
+    "message": "Whitelisted Domains"
+  },
+  "remoteLists": {
+    "message": "Remote Filter Lists"
+  },
+  "remoteEnable": {
+    "message": "Enable remote list"
+  },
+  "remoteSync": {
+    "message": "Sync now"
+  },
+  "advancedFeatures": {
+    "message": "Advanced Features"
+  },
+  "notes": {
+    "message": "Notes"
+  }
+}
