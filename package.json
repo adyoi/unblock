@@ -1,0 +1,20 @@
+{
+  "name": "unblock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightweight, privacy-first MV3 content blocker with element picker and cosmetic filtering.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adyoi/unblock.git"
+  },
+  "scripts": {
+    "test": "npm run test:guard && npm run test:background",
+    "test:guard": "node tools/test-main-guard.js",
+    "test:background": "node tools/test-background.js",
+    "verify": "python tools/verify.py .",
+    "pack": "python tools/pack.py",
+    "verify:dist": "python tools/verify.py dist/unblock-1.0.0.zip",
+    "ci": "npm test && npm run verify && npm run pack && npm run verify:dist"
+  }
+}

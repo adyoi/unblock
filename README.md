@@ -1,6 +1,6 @@
 # Unblock
 
-![Unblock](./store/banner.png)
+![Unblock](./store/marquee.png)
 
 > Lightweight, privacy-first MV3 content blocker. Inspired by uBlock Origin, restructured and optimized for Chromium Manifest V3 with practical trade-offs clearly documented.
 
@@ -205,7 +205,8 @@ D:\Project\ublock-origin/
 - `js/main-guard.js` runs at `document_start` in `world: "MAIN"`. An ISOLATED-world guard cannot see the page's real `window.open`, so this file must stay in MAIN.
 - Installed once per document behind `__unblockGuardInstalled__`, so re-injection never stacks listeners.
 - `window.open` is a self-healing accessor: page code assigning over it is ignored, and it is re-sealed for the first seconds plus on `pageshow` (BFCache restores).
-- `window.open(url)` is blocked unconditionally; `location.assign/replace` and anchor navigation are only cancelled for URLs matching an ad pattern.
+- `window.open(url)` is blocked unconditionally; `location.assign/replace` are only cancelled for URLs matching an ad pattern.
+- Anchor navigation is cancelled only for ad-like/blocked URLs. A genuine `target="_blank"` (or ctrl/cmd/middle-click) link to a clean URL is **allowed**; only popunder surfaces are vetoed — an anchor inside a media/player wrapper, or an invisible/positioned overlay (no text, no children, fixed/absolute or near-zero opacity). Programmatic `.click()` on anchors, SVG anchors and image-map AREAs follows the same ad-only rule.
 - The DOM guard uses `preventDefault()` + `stopPropagation()` only, never `stopImmediatePropagation()`, so player and SPA listeners keep working.
 - Media controls are exempted on the target and its ancestors, with the exemption deliberately bounded (few hops, small subtree) so a page-level wrapper that merely contains a video cannot exempt the whole site.
 - Regression harness: `node tools/test-main-guard.js`.
@@ -252,11 +253,17 @@ D:\Project\ublock-origin/
 
 ### Automated Checks
 ```bash
-node tools/test-main-guard.js          # guard regression harness (21 assertions)
+npm test                               # offline unit harnesses (guard + background)
+node tools/test-main-guard.js          # popup/new-tab guard regression (61 assertions)
+node tools/test-background.js          # service-worker/settings regression (92 assertions)
 python tools/verify.py .               # validate the source tree
 python tools/pack.py                   # build dist/unblock-<version>.zip
 python tools/verify.py dist/unblock-1.0.0.zip
 ```
+
+The guard and background harnesses are pure Node (no browser), so they run anywhere.
+The Chrome-driven E2E probes (`tools/dnr-test.js`, `tools/e2e-guard.js`,
+`tools/e2e-probe.js`) need a local Chrome install and are run manually.
 
 `verify.py` enforces Manifest V3 shape, that every manifest-referenced file exists, that all rules parse, are uniquely id'd, `thirdParty`-scoped and free of risky resource types, that every shipped `.js` passes `node --check` and contains no `eval`/remote import/legacy branding, and that icons are square PNGs at their declared sizes.
 
@@ -348,8 +355,9 @@ python -m json.tool rules/*.json
 ## Roadmap
 
 - [x] DNR exception rules for whitelist (cleaner semantics)
+- [x] Advanced picker: block parent + undo (session history)
 - [ ] Remote filter list sync (opt-in, local cache, no third-party tracking)
-- [ ] Advanced picker: block parent/siblings, undo
+- [ ] Advanced picker: "block similar" (sibling/selector generalization)
 - [ ] Scriptlets: expand safe set (`abort-current-script`, `remove-class` subset) with allowlist
 - [ ] `_locales/en` + base i18n scaffolding
 - [ ] Options: rule validation UI (highlight invalid selectors/filters)

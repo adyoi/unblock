@@ -129,7 +129,22 @@
     });
   }
 
-  const mo = new MutationObserver(scheduleApply);
+  // Only newly added element nodes can introduce new matches. Text/comment
+  // mutations (chat, timers, live counters) are the common case on busy pages,
+  // so skip the full re-scan unless at least one element node was inserted.
+  function hasElementInsert(records) {
+    for (let i = 0; i < records.length; i++) {
+      const added = records[i].addedNodes;
+      for (let j = 0; j < added.length; j++) {
+        if (added[j] && added[j].nodeType === 1) return true;
+      }
+    }
+    return false;
+  }
+
+  const mo = new MutationObserver((records) => {
+    if (hasElementInsert(records)) scheduleApply();
+  });
 
   function startObserver() {
     if (document.documentElement) {

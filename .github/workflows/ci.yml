@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Offline unit harnesses
+        run: npm test
+
+      - name: Validate source tree
+        run: python tools/verify.py .
+
+      - name: Build package
+        run: python tools/pack.py
+
+      - name: Validate package
+        run: python tools/verify.py dist/unblock-1.0.0.zip

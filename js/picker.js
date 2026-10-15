@@ -30,7 +30,7 @@
     } catch (e) {}
   }
   ensureMounted();
-  let target = null, last = null, locked = null, history = [], pageSelectors = [], marked = [], pending = new Map();
+  let target = null, last = null, locked = null, history = [], pageSelectors = [], marked = [];
   function getSelector(el) {
     if (!(el instanceof Element)) return null;
     if (el === document.body || el === document.documentElement) return null;
@@ -113,8 +113,7 @@
     applyCursor();
     placeToolbar(locked);
   }
-  let pickId = 0;
-  function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} pickId++; const id = pickId; const entry = { el, sel }; history.push(entry); pending.set(id, entry); try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel, id: id }, '*'); } catch (e) {} }
+  function applyRule(sel, el) { if (!sel) return; try { el.classList.add('unblock-picked'); } catch (e) {} history.push({ el: el, sel: sel }); try { window.postMessage({ type: 'UNBLOCK_PICKED', selector: sel }, '*'); } catch (e) {} }
   function releaseLock() { if (locked) { try { locked.classList.remove('unblock-locked'); } catch (e) {} } locked = null; try { box.style.display = ''; } catch (e) {} applyCursor(); }
   function markUnblocked(el) {
     if (!el) return;
@@ -172,11 +171,6 @@
     if (ev.source !== window || !ev.data) return;
     if (ev.data.type === 'UNBLOCK_RULESET' && Array.isArray(ev.data.selectors)) {
       pageSelectors = ev.data.selectors.filter((s) => typeof s === 'string');
-      return;
-    }
-    if (ev.data.type === 'UNBLOCK_PICK_ACK' && ev.data.id) {
-      const id = ev.data.id; const p = pending.get(id);
-      if (p) { pending.delete(id); history.push(p); }
       return;
     }
     if (ev.data.type === 'UNBLOCK_PICKER_STOP') { cleanup(); }
